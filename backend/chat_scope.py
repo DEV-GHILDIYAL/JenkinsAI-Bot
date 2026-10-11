@@ -16,16 +16,18 @@ _BUILD = re.compile(
     r"unstable|aborted|success|failure|failed|error|exception|denied|fatal|"
     r"exit(?: code)?|evidence|verdict|hidden issue|inspect|diagnos(?:e|is)|"
     r"cause|fix|verify|excerpt|dockerfile|permission|skipped|ignored|flaky|"
-    r"retry|queue|controller|sh step|this run|this build)\b"
+    r"retry|queue|controller|sh step|this run|this build|"
+    r"fail|kyun|kyu|kaise|kya|batao|samjhao|dekho|check|dikhao|karo|iska|iski|isme|masla|wajah)\b"
 )
 _FOLLOW_UP = re.compile(
     r"(?i)^\s*(please\s+)?(why|how|what|which|where|when|is this|are these|"
     r"can i|could i|should i|fix|explain|next|cause|evidence|summar(?:y|ise|ize)|"
-    r"diagnose|analy[sz]e|help|tell me|show me)\b"
+    r"diagnose|analy[sz]e|help|tell me|show me|"
+    r"kyun|kyu|kya|kaise|batao|samjhao|check|dikhao|bata|ye|yeh|iska|iski)\b"
 )
 _BUILD_REFERENCE = re.compile(
     r"(?i)\b(?:pipeline|job)\s+(.+?)\s+"
-    r"(?:(?:hai|iska|ka|ki|ke)\s+)*(?:build|run)"
+    r"(?:(?:hai|iska|ka|ki|ke|ko|mein|me|par)\s+)*(?:build|run)"
     r"\s*(?:number|no\.?)?\s*#?\s*(\d+)\b"
 )
 
@@ -40,9 +42,9 @@ def build_question_allowed(text: str) -> bool:
         return True
     if not _FOLLOW_UP.match(question):
         return False
-    if len(question) <= 24:
+    if len(question) <= 30:
         return True
-    return bool(re.search(r"(?i)\b(this|that|it|build|job|log|console|error|fail|stage|test|agent|pipeline)\b", question))
+    return bool(re.search(r"(?i)\b(this|that|it|build|job|log|console|error|fail|stage|test|agent|pipeline|ye|yeh|kya|kyun|karo|batao)\b", question))
 
 
 def parse_build_reference(text: str) -> tuple[str, int] | None:

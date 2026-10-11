@@ -195,7 +195,22 @@ def create_app(settings=None, jenkins=None, model=None):
         messages = body.messages
         if reference and (job != body.job or build != body.build):
             messages = [body.messages[-1]]
-        answer, ctx = await generate(messages, job, build)
+        try:
+            answer, ctx = await generate(messages, job, build)
+        except HTTPException as err:
+            if reference and err.status_code in {404, 502}:
+                # If user asked about another job/build that doesn't exist, fall back to current build and explain
+                return {
+                    "answer": f"Job ya build '{job} #{build}' Jenkins par nahi mila ({err.detail}). Aap current build (#{body.build}) ke baare mein pooch sakte hain.",
+                    "refused": False,
+                    "demo": s.demo,
+                    "model": None if s.demo else s.model,
+                    "job": body.job,
+                    "build": body.build,
+                    "memory_match": None,
+                    "context": None,
+                }
+            raise
         return {"answer": answer, "refused": False, "demo": s.demo,
                 "model": None if s.demo else s.model, "job": job, "build": build,
                 "memory_match": ctx.get("prior_user_confirmed_diagnosis") if ctx else None,
