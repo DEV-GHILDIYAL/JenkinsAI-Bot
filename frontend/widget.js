@@ -9,8 +9,15 @@
   if (!src) return;
   const base = new URL("../", src);
   const button = document.createElement("button");
-  button.textContent = "Ask JenkinsAI";
-  button.style.cssText = "position:fixed;right:24px;bottom:24px;z-index:2147483647;background:#9fe3cc;color:#101722;border:0;border-radius:24px;padding:14px 20px;font:600 14px system-ui;cursor:pointer";
+  button.setAttribute("aria-label", "Open JenkinsAI");
+  button.title = "Open JenkinsAI";
+  button.style.cssText = "position:fixed;right:24px;bottom:24px;z-index:2147483647;background:#9fe3cc;color:#101722;border:0;border-radius:50%;width:56px;height:56px;padding:0;font:28px system-ui;cursor:pointer;display:grid;place-items:center;box-shadow:0 4px 16px #0004";
+  const icon = document.createElement("span");
+  icon.textContent = "🤖";
+  const badge = document.createElement("span");
+  badge.hidden = true;
+  badge.style.cssText = "position:absolute;top:-5px;right:-5px;min-width:20px;height:20px;padding:2px 5px;border-radius:10px;background:#e64b5d;color:white;font:700 11px system-ui";
+  button.append(icon, badge);
   const frame = document.createElement("iframe");
   frame.id = "jenkinsai-widget-frame"; frame.title = "JenkinsAI read-only assistant";
   frame.src = new URL("?widget=1", base).href; frame.hidden = true;
@@ -21,9 +28,11 @@
     if (event.source !== frame.contentWindow || event.origin !== base.origin || event.data?.type !== "jenkinsai-build-event") return;
     if (frame.hidden) {
       unread += 1;
-      button.textContent = `JenkinsAI · ${unread} updates`;
+      badge.textContent = unread > 9 ? "9+" : String(unread);
+      badge.hidden = false;
+      button.setAttribute("aria-label", `Open JenkinsAI, ${unread} updates`);
     }
   });
-  button.onclick = () => { frame.hidden = !frame.hidden; if (!frame.hidden) unread = 0; button.textContent = frame.hidden ? "Ask JenkinsAI" : "Close assistant"; button.setAttribute("aria-expanded", String(!frame.hidden)); };
+  button.onclick = () => { frame.hidden = !frame.hidden; if (!frame.hidden) { unread = 0; badge.hidden = true; } icon.textContent = frame.hidden ? "🤖" : "✕"; button.setAttribute("aria-label", frame.hidden ? "Open JenkinsAI" : "Close JenkinsAI"); button.title = frame.hidden ? "Open JenkinsAI" : "Close JenkinsAI"; button.setAttribute("aria-expanded", String(!frame.hidden)); };
   document.body.append(frame, button);
 })();
