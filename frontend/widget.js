@@ -86,11 +86,44 @@
     /* Bot Launcher */
     #jenkinsai-inspector .ai-launcher{position:relative;margin-left:auto;width:52px;height:52px;border-radius:50%;border:2px solid var(--accent);background:var(--surface);color:var(--accent);box-shadow:0 6px 20px -4px rgba(37,99,235,0.3);cursor:pointer;padding:0;display:grid;place-items:center;transition:all .2s cubic-bezier(0.34,1.56,0.64,1)}
     #jenkinsai-inspector .ai-launcher:hover{transform:scale(1.08) translateY(-2px);box-shadow:0 8px 24px -4px rgba(37,99,235,0.4)}
-    #jenkinsai-inspector .ai-chat-icon{width:25px;height:25px}
+    #jenkinsai-inspector .ai-mascot{width:34px;height:34px;overflow:visible;transition:transform .2s ease}
+    #jenkinsai-inspector .ai-mascot-face{fill:var(--accent-soft);stroke:currentColor;stroke-width:1.7}
+    #jenkinsai-inspector .ai-mascot-eye{fill:currentColor;transform-box:fill-box;transform-origin:center}
+    #jenkinsai-inspector .ai-mascot-cheek{fill:#ff9bac;opacity:.45}
+    #jenkinsai-inspector .ai-mascot-mouth{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;opacity:0}
+    #jenkinsai-inspector .ai-mouth-neutral{opacity:1}
+    #jenkinsai-inspector .ai-launcher:hover .ai-mascot{transform:translateY(-1px) rotate(-4deg)}
     #jenkinsai-inspector[data-verdict=failed] .ai-launcher,#jenkinsai-inspector[data-verdict=issue] .ai-launcher{color:var(--bad);border-color:var(--bad);box-shadow:0 6px 20px -4px rgba(220,38,38,0.25)}
     #jenkinsai-inspector[data-verdict=clean] .ai-launcher{color:var(--good);border-color:var(--good);box-shadow:0 6px 20px -4px rgba(5,150,105,0.25)}
+    #jenkinsai-inspector[data-verdict=loading] .ai-mascot{animation:ai-mascot-float 1.8s ease-in-out infinite}
+    #jenkinsai-inspector[data-verdict=loading] .ai-mascot-eye{animation:ai-mascot-look 1.5s ease-in-out infinite alternate}
+    #jenkinsai-inspector[data-verdict=loading] .ai-mouth-neutral{opacity:0}
+    #jenkinsai-inspector[data-verdict=loading] .ai-mouth-thinking{opacity:1}
+    #jenkinsai-inspector[data-verdict=clean] .ai-mascot{animation:ai-mascot-happy .65s ease-out 1}
+    #jenkinsai-inspector[data-verdict=clean] .ai-mouth-neutral{opacity:0}
+    #jenkinsai-inspector[data-verdict=clean] .ai-mouth-happy{opacity:1}
+    #jenkinsai-inspector[data-verdict=issue] .ai-mascot{animation:ai-mascot-tilt 1.8s ease-in-out infinite}
+    #jenkinsai-inspector[data-verdict=issue] .ai-mouth-neutral{opacity:0}
+    #jenkinsai-inspector[data-verdict=issue] .ai-mouth-worried{opacity:1}
+    #jenkinsai-inspector[data-verdict=failed] .ai-mascot{animation:ai-mascot-sad 2.4s ease-in-out infinite}
+    #jenkinsai-inspector[data-verdict=failed] .ai-mouth-neutral{opacity:0}
+    #jenkinsai-inspector[data-verdict=failed] .ai-mouth-sad{opacity:1}
+    #jenkinsai-inspector[data-verdict=uncertain] .ai-mascot{animation:ai-mascot-curious 2.2s ease-in-out infinite}
+    #jenkinsai-inspector[data-verdict=uncertain] .ai-mouth-neutral{opacity:0}
+    #jenkinsai-inspector[data-verdict=uncertain] .ai-mouth-curious{opacity:1}
+    #jenkinsai-inspector[data-verdict=error] .ai-launcher{color:var(--warn);border-color:var(--warn)}
+    #jenkinsai-inspector[data-verdict=error] .ai-mascot{animation:ai-mascot-oops .45s ease-in-out 2}
+    #jenkinsai-inspector[data-verdict=error] .ai-mouth-neutral{opacity:0}
+    #jenkinsai-inspector[data-verdict=error] .ai-mouth-worried{opacity:1}
 
     @keyframes ai-slideup{from{opacity:0;transform:translateY(12px) scale(0.98)}to{opacity:1;transform:none}}
+    @keyframes ai-mascot-float{0%,100%{transform:translateY(1px)}50%{transform:translateY(-2px)}}
+    @keyframes ai-mascot-look{from{transform:translateX(-1px)}to{transform:translateX(1px)}}
+    @keyframes ai-mascot-happy{0%{transform:scale(.9)}55%{transform:scale(1.13) rotate(5deg)}100%{transform:scale(1)}}
+    @keyframes ai-mascot-tilt{0%,100%{transform:rotate(0)}50%{transform:rotate(-5deg)}}
+    @keyframes ai-mascot-sad{0%,100%{transform:translateY(0)}50%{transform:translateY(1px)}}
+    @keyframes ai-mascot-curious{0%,100%{transform:rotate(0)}50%{transform:rotate(5deg)}}
+    @keyframes ai-mascot-oops{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px) rotate(-4deg)}75%{transform:translateX(2px) rotate(4deg)}}
     #jenkinsai-inspector .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
     #jenkinsai-inspector .ai-msg.ai-diagnosis{max-width:100%;padding:0;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px;background:var(--surface);color:var(--fg)!important}
     #jenkinsai-inspector .ai-diagnosis-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 13px;cursor:pointer;list-style:none}
@@ -165,9 +198,20 @@
 
     <!-- 3. Chat launcher -->
     <button class="ai-launcher" type="button" aria-label="Jenkins AI" aria-expanded="false" title="Jenkins AI Assistant">
-      <svg class="ai-chat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H6l-3 2v-5.5A7.5 7.5 0 1 1 20 11.5Z"/>
-        <path d="M8 11.5h.01M12 11.5h.01M16 11.5h.01" stroke-width="2.4"/>
+      <svg class="ai-mascot" viewBox="0 0 40 40" aria-hidden="true">
+        <path d="M20 5V2m-2 0h4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        <circle cx="20" cy="2" r="1.5" fill="var(--warn)"/>
+        <rect class="ai-mascot-face" x="5" y="7" width="30" height="28" rx="10"/>
+        <circle class="ai-mascot-eye" cx="14" cy="18" r="2"/>
+        <circle class="ai-mascot-eye" cx="26" cy="18" r="2"/>
+        <ellipse class="ai-mascot-cheek" cx="10.5" cy="23" rx="2.5" ry="1.4"/>
+        <ellipse class="ai-mascot-cheek" cx="29.5" cy="23" rx="2.5" ry="1.4"/>
+        <path class="ai-mascot-mouth ai-mouth-neutral" d="M16 26h8"/>
+        <path class="ai-mascot-mouth ai-mouth-thinking" d="M17 26h6"/>
+        <path class="ai-mascot-mouth ai-mouth-happy" d="M14 24q6 7 12 0"/>
+        <path class="ai-mascot-mouth ai-mouth-worried" d="M15 27q5-5 10 0"/>
+        <path class="ai-mascot-mouth ai-mouth-sad" d="M15 28q5-6 10 0"/>
+        <path class="ai-mascot-mouth ai-mouth-curious" d="M18 26q3 2 5-1"/>
       </svg>
     </button>
   `;
