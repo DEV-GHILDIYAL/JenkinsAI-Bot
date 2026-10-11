@@ -2,13 +2,26 @@ import re
 
 ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 PATTERNS = [
+    # RSA, EC, OpenSSH Private Keys
     (r"-----BEGIN [^-]*PRIVATE KEY-----.*?(?:-----END [^-]*PRIVATE KEY-----|\Z)", "[REDACTED PRIVATE KEY]"),
-    (r"(?i)(authorization\s*[:=]\s*(?:bearer|basic)\s+)\S+", r"\1[REDACTED]"),
-    (r"(?i)((?:password|passwd|secret|token|api[_-]?key|access[_-]?key|credential)[\w-]*[\"']?\s*[:=]\s*)(?:\"[^\"\n]*\"|'[^'\n]*'|[^\s,;]+)", r"\1[REDACTED]"),
-    (r"(?i)(https?://)[^\s/@]+:[^\s/@]+@", r"\1[REDACTED]@"),
-    (r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b", "[REDACTED AWS KEY]"),
-    (r"\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]+|AIza[A-Za-z0-9_-]{30,}|xox[baprs]-[A-Za-z0-9-]+)\b", "[REDACTED TOKEN]"),
+    # Passwords, API Keys, Tokens in key-value or JSON or env format
+    (r"(?i)((?:password|passwd|secret|api[_-]?key|access[_-]?key|auth[_-]?token|app[_-]?secret|private[_-]?key|credential)[\w-]*[\"']?\s*[:=]\s*)(?:\"[^\"\n]*\"|'[^'\n]*'|[^\s,;]+)", r"\1[REDACTED]"),
+    # Authorization Headers (Bearer, Basic, Token)
+    (r"(?i)(authorization\s*[:=]\s*(?:bearer|basic|token)\s+)\S+", r"\1[REDACTED]"),
+    # URL credentials: http://user:password@host
+    (r"(?i)(https?|postgres|postgresql|mysql|mongodb|redis)://[^\s/@]+:[^\s/@]+@", r"\1://[REDACTED]@"),
+    # AWS Keys (AKIA, ASIA and Secret Access Keys 40 chars)
+    (r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b", "[REDACTED AWS ACCESS KEY]"),
+    (r"(?i)(aws_secret_access_key\s*[:=]\s*)[A-Za-z0-9/+=]{40}", r"\1[REDACTED AWS SECRET]"),
+    # GitHub Tokens (ghp_, gho_, ghu_, ghs_, ghr_, github_pat_)
+    (r"\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{30,})\b", "[REDACTED GITHUB TOKEN]"),
+    # Google API Keys (AIza...), Slack Tokens (xox[baprs]-...), Generic API tokens
+    (r"\bAIza[0-9A-Za-z-_]{35}\b", "[REDACTED GOOGLE API KEY]"),
+    (r"\bxox[baprs]-[0-9A-Za-z-]{10,}\b", "[REDACTED SLACK TOKEN]"),
+    # JSON Web Tokens (JWT)
     (r"\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b", "[REDACTED JWT]"),
+    # .env style variable assignments: KEY=value
+    (r"(?i)\b((?:SECRET|TOKEN|PASSWORD|API_KEY|PRIVATE_KEY|DATABASE_URL)_[A-Z0-9_]*\s*=\s*)\S+", r"\1[REDACTED]"),
 ]
 
 
