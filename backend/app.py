@@ -74,7 +74,7 @@ def create_app(settings=None, jenkins=None, model=None):
         return answer, ctx
 
     async def analyze_failure(job, build):
-        answer, _ = await generate([Message(role="user", content="Automatically analyze this completed failed build. Cite log evidence, explain the likely root cause, and suggest a fix and verification steps.")], job, build)
+        answer, _ = await generate([Message(role="user", content="Analyze this failed build in four short bullets: Cause, Evidence with log lines, Fix, Verify. Keep it under 100 words.")], job, build)
         return answer
 
     monitor = BuildMonitor(s, j, analyze_failure)

@@ -10,6 +10,18 @@ let monitorTimer = null, monitorCursor = 0;
 let monitorInstance = null;
 let monitorGeneration = 0;
 const apiBase = new URL("./", location.href);
+function readPageContext() {
+  let path = location.pathname;
+  try { if (embedded && window.parent !== window && window.parent.location.origin === location.origin) path = window.parent.location.pathname; } catch { /* Standalone iframe: no Jenkins page context. */ }
+  const parts = path.split("/").filter(Boolean).map(part => { try { return decodeURIComponent(part); } catch { return part; } });
+  const jobs = [];
+  let lastJob = -1;
+  for (let i = 0; i < parts.length - 1; i++) if (parts[i] === "job") { jobs.push(parts[i + 1]); lastJob = i + 1; i++; }
+  const build = lastJob >= 0 && /^\d+$/.test(parts[lastJob + 1] || "") ? Number(parts[lastJob + 1]) : null;
+  return {job: jobs.join("/"), build};
+}
+let pageContext = readPageContext();
+function pageLabel() { return pageContext.job ? `${pageContext.job}${pageContext.build ? ` #${pageContext.build}` : ""}` : "Open a Jenkins job"; }
 const preferredTheme = window.matchMedia("(prefers-color-scheme: dark)");
 function applyTheme(theme) { document.documentElement.dataset.theme = theme === "dark" ? "dark" : "light"; }
 applyTheme(params.get("theme") || (preferredTheme.matches ? "dark" : "light"));
@@ -57,6 +69,13 @@ function status(text) { el("status").textContent = text; }
 async function watchBuilds(generation = monitorGeneration) {
   if (!connected || generation !== monitorGeneration) return;
   try {
+    const latestPage = readPageContext();
+    if (latestPage.job !== pageContext.job || latestPage.build !== pageContext.build) {
+      pageContext = latestPage; history = []; el("messages").replaceChildren(); el("monitor-events").replaceChildren();
+      addMessage("model", pageContext.job ? `Following ${pageLabel()}. Ask me about this page.` : "Open a Jenkins job or build to see its updates here.");
+      el("mode").textContent = `Online · ${pageLabel()}`;
+      await loadJobs();
+    }
     const data = await api("api/monitor?after=" + monitorCursor);
     if (generation !== monitorGeneration) return;
     // Server restart resets its bounded event cursor.
@@ -66,9 +85,10 @@ async function watchBuilds(generation = monitorGeneration) {
       return;
     }
     monitorInstance = data.instance;
-    el("monitor-badge").textContent = !data.enabled ? "OFF" : data.error ? "RETRYING" : data.last_poll ? "WATCHING" : "STARTING";
-    el("monitor-status").textContent = data.error || (!data.enabled ? "Server monitoring is disabled." : `${data.demo ? "Sample data · " : ""}${data.job_count} jobs · checks every ${data.interval}s. ${data.auto_analyze ? "New failures are sent to Gemma automatically." : "Status alerts enabled. Automatic AI analysis is off."}${data.truncated ? " Scan limited to 100 job/folder entries." : ""}`);
+    el("monitor-badge").textContent = embedded && !pageContext.job ? "NO JOB" : !data.enabled ? "OFF" : data.error ? "RETRYING" : data.last_poll ? "WATCHING" : "STARTING";
+    el("monitor-status").textContent = data.error || (embedded ? !pageContext.job ? "Open a Jenkins job to follow its builds." : `Showing only ${pageLabel()}. ${data.auto_analyze ? "Failed builds get AI summaries." : "Build alerts are on."}` : `${data.job_count} jobs · checks every ${data.interval}s.`);
     for (const item of data.events) {
+      if (embedded && (!pageContext.job || item.job !== pageContext.job || (pageContext.build && item.build !== pageContext.build))) continue;
       const event = document.createElement("details"); event.className = "monitor-event";
       event.dataset.result = item.result;
       const title = document.createElement("summary");
@@ -99,8 +119,16 @@ async function api(path, options = {}) {
 function addMessage(role, text) {
   const node = document.createElement("div"); node.className = "message " + role;
   const author = document.createElement("span"); author.className = "author"; author.textContent = role === "user" ? "YOU" : "JENKINSAI";
-  const body = document.createElement("p"); body.textContent = text;
-  node.append(author, body); el("messages").append(node); el("messages").scrollTop = el("messages").scrollHeight;
+  const body = document.createElement("p");
+  const cleaned = role === "model" ? text.replace(/^\s{0,3}#{1,6}\s*/gm, "").replace(/\*\*/g, "").replace(/\n{3,}/g, "\n\n").trim() : text;
+  if (role === "model" && cleaned.length > 520) {
+    const cut = cleaned.lastIndexOf(" ", 520);
+    body.textContent = cleaned.slice(0, cut > 360 ? cut : 520).trimEnd() + "…";
+    const more = document.createElement("button"); more.className = "message-more"; more.textContent = "Read more";
+    more.onclick = () => { const expanded = more.textContent === "Read less"; body.textContent = expanded ? cleaned.slice(0, cut > 360 ? cut : 520).trimEnd() + "…" : cleaned; more.textContent = expanded ? "Read more" : "Read less"; };
+    node.append(author, body, more);
+  } else { body.textContent = cleaned; node.append(author, body); }
+  el("messages").append(node); el("messages").scrollTop = el("messages").scrollHeight;
   while (el("messages").children.length > 80) el("messages").firstChild.remove();
 }
 function option(select, value, text) { const o = document.createElement("option"); o.value = value; o.textContent = text; select.append(o); }
@@ -111,17 +139,39 @@ function resetPreview() {
 function setBusy(value) {
   busy = value;
   botState(value ? "thinking" : "idle");
-  for (const id of ["send", "clear", "diagnose", "general", "refresh", "up", "connect", "jobs", "consent"]) el(id).disabled = value;
-  el("builds").disabled = value || !selectedJob;
+  for (const id of ["send", "clear", "diagnose", "general", "refresh", "up", "connect", "consent"]) el(id).disabled = value;
+  el("jobs").disabled = value || embedded;
+  el("builds").disabled = value || !selectedJob || (embedded && !!pageContext.build) || el("builds").options.length < 2;
   el("preview").disabled = value || !el("builds").value;
   el("consent").disabled = value || !previewed;
 }
 async function loadJobs() {
-  const data = await api("api/jobs?folder=" + encodeURIComponent(folder));
-  jobEntries = data.jobs; el("jobs").replaceChildren(); option(el("jobs"), "", folder ? folder + " / …" : "Select job or folder");
-  data.jobs.forEach((j, index) => option(el("jobs"), String(index), (j.folder ? "Folder · " : "") + j.name));
-  el("up").hidden = !folder; selectedJob = "";
-  el("builds").replaceChildren(); option(el("builds"), "", "Select failed build"); el("builds").disabled = true; el("preview").disabled = true; resetPreview();
+  const root = await api("api/jobs?folder=" + encodeURIComponent(folder));
+  if (!embedded && !pageContext.job) {
+    jobEntries = root.jobs; el("jobs").replaceChildren(); option(el("jobs"), "", folder ? folder + " / …" : "Select job or folder");
+    root.jobs.forEach((job, index) => option(el("jobs"), String(index), (job.folder ? "Folder · " : "") + job.name));
+    el("up").hidden = !folder; selectedJob = "";
+    el("builds").replaceChildren(); option(el("builds"), "", "Select failed build"); el("builds").disabled = true; el("preview").disabled = true; resetPreview();
+    return;
+  }
+  jobEntries = []; el("jobs").replaceChildren(); el("up").hidden = true;
+  el("builds").replaceChildren(); el("builds").disabled = true; el("preview").disabled = true; resetPreview();
+  selectedJob = pageContext.job;
+  if (!selectedJob) {
+    option(el("jobs"), "", "Open a Jenkins job first"); el("jobs").disabled = true;
+    option(el("builds"), "", "No build selected"); return;
+  }
+  jobEntries = [{name: selectedJob.split("/").at(-1), path: selectedJob, folder: false}];
+  option(el("jobs"), "0", selectedJob); el("jobs").disabled = true;
+  const data = await api("api/builds?job=" + encodeURIComponent(selectedJob));
+  option(el("builds"), "", pageContext.build ? "Current build" : "Select failed build");
+  if (pageContext.build) {
+    option(el("builds"), String(pageContext.build), `#${pageContext.build} · Current page`);
+    el("builds").value = String(pageContext.build); el("builds").disabled = true; el("preview").disabled = false;
+  } else {
+    data.builds.forEach(b => option(el("builds"), String(b.number), "#" + b.number + " · " + b.result));
+    el("builds").disabled = !data.builds.length;
+  }
 }
 async function connect() {
   clearTimeout(monitorTimer);
@@ -129,7 +179,7 @@ async function connect() {
   connected = false;
   try {
     botState("thinking"); status("Connecting…"); const health = await api("health");
-    el("mode").textContent = health.demo ? "Demo · read-only" : "Online · read-only";
+    el("mode").textContent = health.demo ? "Demo · read-only" : `Online · ${pageLabel()}`;
     document.querySelector(".connection").hidden = health.demo || gateway;
     await loadJobs(); connected = true;
     document.querySelector(".connection").open = false;
@@ -167,7 +217,7 @@ el("preview").onclick = async () => {
     previewed = true; el("preview-panel").open = true; status("Preview stays in your browser. Check for secrets before sharing.");
   } catch (e) { status(e.message); } finally { setBusy(false); }
 };
-el("diagnose").onclick = () => { el("question").value = "Explain this failed build. Identify the likely root cause, cite evidence, and suggest safe fixes and a Jenkinsfile improvement."; el("question").focus(); status(el("consent").checked ? "Ready to send with build evidence." : "Preview a build and enable log sharing to include evidence."); };
+el("diagnose").onclick = () => { el("question").value = `Explain ${pageLabel()} briefly: cause, evidence, fix, verify.`; el("question").focus(); status(el("consent").checked ? "Ready with build evidence." : "Open Analyze a build to include its logs."); };
 el("general").onclick = () => { el("question").value = "How can I improve a Jenkins declarative pipeline for reliability and secure secret handling?"; el("question").focus(); };
 el("composer").onsubmit = async event => {
   event.preventDefault(); const question = el("question").value.trim(); if (!question || busy) return;
@@ -184,10 +234,10 @@ el("composer").onsubmit = async event => {
   } catch (e) { failed = true; status(e.message); el("question").value = question; } finally { setBusy(false); botState(failed ? "error" : "hello"); el("question").focus(); }
 };
 el("question").onkeydown = event => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); el("composer").requestSubmit(); } };
-el("clear").onclick = () => { history = []; el("messages").replaceChildren(); addMessage("model", "Conversation cleared. Ask a DevOps question or select a failed build."); el("consent").checked = false; status(""); };
+el("clear").onclick = () => { history = []; el("messages").replaceChildren(); addMessage("model", pageContext.job ? `Following ${pageLabel()}. Ask me a question.` : embedded ? "Open a Jenkins job or build to see its updates here." : "Select a job or ask me a question."); el("consent").checked = false; status(""); };
 el("close").onclick = () => { el("assistant").hidden = true; el("launcher").hidden = false; el("launcher").setAttribute("aria-expanded", "false"); el("launcher").focus(); };
 el("launcher").onclick = openAssistant;
 el("launcher").hidden = true; resetPreview();
-addMessage("model", "Hi! Ask me about Jenkins or a pipeline failure. I’ll show build alerts in Pipelines; open Analyze a build when you want to share log evidence.");
+addMessage("model", pageContext.job ? `Hi! Following ${pageLabel()}. Ask about this page, or open Analyze a build to share logs.` : embedded ? "Hi! Open a Jenkins job or build to see its updates here." : "Hi! Select a job or ask me a question.");
 botState("hello");
 connect();

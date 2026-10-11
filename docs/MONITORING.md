@@ -51,6 +51,8 @@ ssh -o ExitOnForwardFailure=yes -i ~/JenkinsAI-Server-Key.pem \
 
 Keep that terminal open. Open **http://127.0.0.1:8090/** for Jenkins and sign in. The bottom-right JenkinsAI button loads on every page and connects automatically. The backend continues monitoring with no browser open. Closed widgets show an unread update count. **http://127.0.0.1:8090/assistant/** opens the standalone UI through the same gateway. Direct access to the backend on port 8000 still requires the assistant token.
 
+In the Jenkins widget, alerts and automatic diagnoses are shown only for the job on the open page, or only for that build when a build page is open. The server continues monitoring all reader-visible jobs so it can show relevant updates as the user navigates. The standalone assistant retains its full job selector.
+
 The gateway does not disable/strip Jenkins CSP. A restrictive custom Jenkins script policy may block the injected script: use an approved site-specific integration rather than weakening security globally. Existing reverse proxies can incorporate the reviewed snippet instead. Set Jenkins Location URL to the gateway origin if Jenkins reports a reverse-proxy warning. Public use requires your normal authenticated HTTPS gateway and its exact browser origin in JENKINS_FRAME_ORIGIN; this example is a private SSH demo.
 
 Nginx docs: https://nginx.org/en/docs/http/ngx_http_sub_module.html
