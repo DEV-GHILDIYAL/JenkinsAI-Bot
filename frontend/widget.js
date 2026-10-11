@@ -114,14 +114,31 @@
     } catch { /* Non-JSON proxy errors use the generic status message. */ }
     return detail || `${action} (${response.status}).`;
   }
-  bot.onclick = () => { popup.hidden = !popup.hidden; bot.setAttribute("aria-expanded", String(!popup.hidden)); };
+  function openChatView() {
+    popup.hidden = false;
+    bot.setAttribute("aria-expanded", "true");
+    chat.hidden = false;
+    ask.textContent = "Hide chat";
+    if (!thread.children.length) {
+      addChat("model", "Ask about this build, or name another pipeline and build number. JenkinsAI answers build questions.");
+    }
+    setTimeout(() => question.focus(), 60);
+  }
+  bot.onclick = () => {
+    if (popup.hidden) {
+      openChatView();
+    } else {
+      popup.hidden = true;
+      bot.setAttribute("aria-expanded", "false");
+    }
+  };
   root.querySelector(".ai-close").onclick = () => { popup.hidden = true; bot.setAttribute("aria-expanded", "false"); };
   root.querySelector(".ai-refresh").onclick = () => inspect();
   ask.onclick = () => {
     chat.hidden = !chat.hidden;
     ask.textContent = chat.hidden ? "Ask about this build" : "Hide chat";
     if (!chat.hidden) {
-      if (!thread.children.length) addChat("model", "Ask about this build, or name another pipeline and build number. JenkinsAI only answers build-related questions.");
+      if (!thread.children.length) addChat("model", "Ask about this build, or name another pipeline and build number. JenkinsAI answers build questions.");
       question.focus();
     }
   };
@@ -193,6 +210,11 @@
         return;
       }
       ask.hidden = false;
+      chat.hidden = false;
+      ask.textContent = "Hide chat";
+      if (!thread.children.length) {
+        addChat("model", "Ask about this build, or name another pipeline and build number. JenkinsAI answers build questions.");
+      }
       root.dataset.verdict = data.verdict.toLowerCase();
       title.textContent = ({CLEAN: "No issue found", ISSUE: "Issue found", FAILED: "Build failed", UNCERTAIN: "Review needed"})[data.verdict] || "Review needed";
       result.textContent = `Jenkins: ${data.jenkins_result || "UNKNOWN"}${data.verdict === "ISSUE" && data.jenkins_result === "SUCCESS" ? " · Hidden issue" : ""}`;
