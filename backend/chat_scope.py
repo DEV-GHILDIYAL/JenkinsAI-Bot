@@ -25,11 +25,24 @@ _FOLLOW_UP = re.compile(
     r"diagnose|analy[sz]e|help|tell me|show me|"
     r"kyun|kyu|kya|kaise|batao|samjhao|check|dikhao|bata|ye|yeh|iska|iski)\b"
 )
-_BUILD_REFERENCE = re.compile(
-    r"(?i)\b(?:pipeline|job)\s+(.+?)\s+"
-    r"(?:(?:hai|iska|ka|ki|ke|ko|mein|me|par)\s+)*(?:build|run)"
-    r"\s*(?:number|no\.?)?\s*#?\s*(\d+)\b"
-)
+_BUILD_PATTERNS = [
+    # Explicit "pipeline <job> [hai iska ka ki...] build #<num>"
+    re.compile(
+        r"(?i)\b(?:pipeline|job)\s+([a-zA-Z0-9_\-/\.]+)"
+        r"(?:\s+(?:hai|iska|iski|ka|ki|ke|ko|mein|me|par|wala|wali))*"
+        r"\s+(?:build|run)\s*(?:number|no\.?|#)?\s*#?(\d+)\b"
+    ),
+    # "build #<num> [of/ka/ki] pipeline/job <job>"
+    re.compile(
+        r"(?i)\b(?:build|run)\s*(?:number|no\.?|#)?\s*#?(\d+)\s+"
+        r"(?:of|in|for|from|ka|ki|ke)?\s*(?:pipeline|job)\s+([a-zA-Z0-9_\-/\.]+)\b"
+    ),
+    # Direct "<job> build #<num>" (not preceded by 'this', 'that', 'current')
+    re.compile(
+        r"(?i)\b(?<!this\s)(?<!that\s)(?<!current\s)(?<!ye\s)(?<!yeh\s)([a-zA-Z0-9_\-/\.]+)"
+        r"\s+(?:(?:ka|ki|ke|ko)\s+)?(?:build|run)\s*(?:number|no\.?|#)?\s*#?(\d+)\b"
+    ),
+]
 
 
 def build_question_allowed(text: str) -> bool:
@@ -38,6 +51,8 @@ def build_question_allowed(text: str) -> bool:
         return False
     if _OFF_TOPIC.search(question):
         return False
+    if parse_build_reference(question):
+        return True
     if _BUILD.search(question):
         return True
     if not _FOLLOW_UP.match(question):
@@ -48,10 +63,19 @@ def build_question_allowed(text: str) -> bool:
 
 
 def parse_build_reference(text: str) -> tuple[str, int] | None:
-    match = _BUILD_REFERENCE.search(text or "")
-    if not match:
+    t = (text or "").strip()
+    if not t or len(t) > 1000:
         return None
-    job = match.group(1).strip().strip("`'\" ")
-    if not job or len(job) > 500:
-        return None
-    return job, int(match.group(2))
+    for pattern in _BUILD_PATTERNS:
+        match = pattern.search(t)
+        if match:
+            g1, g2 = match.group(1), match.group(2)
+            if g1.isdigit() and not g2.isdigit():
+                build_num = int(g1)
+                job_name = g2.strip("`'\" ").strip()
+            else:
+                job_name = g1.strip("`'\" ").strip()
+                build_num = int(g2)
+            if job_name and len(job_name) <= 500 and job_name.lower() not in {"this", "that", "it", "current", "ye", "yeh"}:
+                return job_name, build_num
+    return None
