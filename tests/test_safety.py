@@ -143,6 +143,25 @@ def test_chat_refuses_off_topic_without_calling_the_model():
     assert ok.status_code == 200 and ok.json()["refused"] is False and "OFFLINE DEMO" in ok.json()["answer"]
 
 
+def test_named_build_upstream_failure_is_not_reported_as_missing_build():
+    class BrokenJenkins:
+        async def context(self, job, build):
+            raise HTTPException(502, "Jenkins unavailable or request timed out")
+
+    client = TestClient(create_app(Settings(), jenkins=BrokenJenkins()))
+    response = client.post(
+        "/api/chat",
+        json={
+            "messages": [{"role": "user", "content": "open testing pipeline build 1 and analyse it"}],
+            "job": "demo-api",
+            "build": 42,
+            "share_logs": True,
+        },
+    )
+    assert response.status_code == 502
+    assert response.json()["detail"] == "Jenkins unavailable or request timed out"
+
+
 def test_build_question_allowlist():
     assert build_question_allowed("Why did this build fail?")
     assert build_question_allowed("Explain the console error on L8")

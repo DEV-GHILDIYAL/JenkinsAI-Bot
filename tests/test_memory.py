@@ -11,6 +11,8 @@ from backend.root_cause_memory import RootCauseMemory, error_signature
 def test_build_reference_parser_supports_job_and_pipeline_phrasing():
     assert parse_build_reference("Check pipeline team/api build #12") == ("team/api", 12)
     assert parse_build_reference("pipeline testing hai iska build number 7 check karo") == ("testing", 7)
+    assert parse_build_reference("open testing pipeline build 1 and analyse it") == ("testing", 1)
+    assert parse_build_reference("testing build #2 ko check karo") == ("testing", 2)
     assert parse_build_reference("Why did this build fail?") is None
 
 

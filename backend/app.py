@@ -206,8 +206,8 @@ def create_app(settings=None, jenkins=None, model=None):
         try:
             answer, ctx = await generate(messages, job, build)
         except HTTPException as err:
-            if reference and err.status_code in {404, 502}:
-                # If user asked about another job/build that doesn't exist, fall back to current build and explain
+            if reference and err.status_code == 404:
+                # A missing named build can be explained without hiding upstream failures.
                 return {
                     "answer": f"Job ya build '{job} #{build}' Jenkins par nahi mila ({err.detail}). Aap current build (#{body.build}) ke baare mein pooch sakte hain.",
                     "refused": False,
