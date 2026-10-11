@@ -1,0 +1,23 @@
+[Unit]
+Description=JenkinsAI read-only developer assistant
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=jenkinsai
+Group=jenkinsai
+WorkingDirectory=/opt/jenkinsai
+EnvironmentFile=/etc/jenkinsai.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/jenkinsai/.venv/bin/python -m uvicorn backend.app:create_app --factory --host 127.0.0.1 --port 8000 --workers 1 --no-access-log
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

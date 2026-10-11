@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>JenkinsAI · Build clarity</title>
+  <link rel="stylesheet" href="static/app.css"><script src="static/app.js" defer></script>
+</head>
+<body>
+  <div class="workspace">
+    <header class="topbar"><a class="brand" href="./"><span class="mark">J</span> Jenkins<span>AI</span></a><span class="toplabel">DEVELOPER WORKSPACE</span><span class="pill">Read-only access</span></header>
+    <main>
+      <div class="eyebrow">AI BELONGS TO EVERYONE / HACKTOBERFEST 2026</div>
+      <h1>Failed builds.<br><span>Clear next steps.</span></h1>
+      <p class="intro">From console noise to an understandable diagnosis.<br>Inspect a build, ask a question, and review the next step.</p>
+      <div class="workflow"><span><b>01</b> Select a build</span><span><b>02</b> Inspect the evidence</span><span><b>03</b> Ask Gemma</span></div>
+      <section class="console-card"><div class="console-heading"><span>BUILD EVIDENCE</span><span id="evidence-badge">No build selected</span></div><pre id="evidence">Open the assistant and select a failed build.
+
+Previewing logs does not send them to Google.
+Review the excerpt before enabling log sharing.</pre></section>
+      <div class="footnote">Built with Gemma 4 · FastAPI · Jenkins REST API<br>No build triggers. No deployments. Your review comes first.</div>
+    </main>
+  </div>
+  <button id="launcher" aria-label="Open JenkinsAI assistant" aria-expanded="true">Ask JenkinsAI <span>↗</span></button>
+  <aside id="assistant" aria-label="JenkinsAI assistant">
+    <header class="chat-head"><div class="avatar">J</div><div><strong>JenkinsAI</strong><small id="mode">Connecting…</small></div><button id="close" aria-label="Close assistant">×</button></header>
+    <div class="connection"><label for="token">Assistant access token</label><div class="token-row"><input id="token" type="password" autocomplete="off" placeholder="Required in live mode"><button id="connect">Connect</button></div></div>
+    <section class="build-context" aria-label="Build selection">
+      <div class="context-title">BUILD CONTEXT <button id="up" hidden>↑ Parent</button><button id="refresh">Refresh</button></div>
+      <label class="sr-only" for="jobs">Jenkins job or folder</label><select id="jobs"><option value="">Select job or folder</option></select>
+      <div class="build-row"><label class="sr-only" for="builds">Failed build</label><select id="builds" disabled><option value="">Select failed build</option></select><button id="preview" disabled>Preview logs</button></div>
+      <details id="preview-panel"><summary>Redacted log excerpt</summary><pre id="log-preview">Select a build to preview its logs.</pre><small id="log-info"></small></details>
+      <label class="consent"><input id="consent" type="checkbox"> Send this build’s redacted logs to Google with my question</label>
+    </section>
+    <div id="messages" role="log" aria-live="polite" aria-label="Conversation"></div>
+    <div class="suggestions"><button id="diagnose">Explain this failure</button><button id="general">Improve my Jenkinsfile</button></div>
+    <div id="status" role="status"></div>
+    <form id="composer"><label class="sr-only" for="question">Your message</label><textarea id="question" rows="2" maxlength="12000" placeholder="Ask about this build or anything DevOps…"></textarea><button id="send" type="submit" aria-label="Send message">↑</button></form>
+    <footer class="chat-foot"><span>Suggestions need human review.</span><button id="clear">Clear chat</button></footer>
+  </aside>
+</body>
+</html>
