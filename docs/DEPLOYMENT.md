@@ -54,7 +54,7 @@ bash deploy/update.sh
 
 The update copies code into `/opt/jenkinsai`, preserves `/etc/jenkinsai.env`, and restarts the assistant service. A Git pull alone does not update the running installed copy. For a first installation, use `bash deploy/install.sh` instead.
 
-Open the assistant through the SSH tunnel at `http://127.0.0.1:8000/`. Offline demo works immediately without API keys and is labeled as sample data. Use **Open assistant** to chat. Under **Add the bot to Jenkins**, drag **Open JenkinsAI** to your bookmarks bar. Open forwarded Jenkins at `http://127.0.0.1:8080/` and click that bookmark for a floating chat panel. The widget is a browser-session integration; it is removed on reload. See [widget setup](JENKINS-WIDGET.md) for persistent integration constraints.
+For the popup, forward private gateway port `8090`, open `http://127.0.0.1:8090/`, sign in to Jenkins, and open a build's **Console Output**. The popup runs on that page and inspects the opened build automatically. See [widget setup](JENKINS-WIDGET.md). Port `8000` serves only the standalone information page and API.
 
 `sudo journalctl -u jenkinsai -n 50 --no-pager` shows service diagnostics. Access logging is disabled; the code does not log requests or console content. `sudo systemctl stop jenkinsai` stops only the assistant. To disable startup use `sudo systemctl disable jenkinsai`. Existing environment secrets are preserved when rerunning the installer. After code updates, explicitly restart the assistant.
 

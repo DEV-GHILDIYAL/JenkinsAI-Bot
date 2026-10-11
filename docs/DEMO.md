@@ -1,28 +1,9 @@
 # Three-minute demo
 
-1. **Problem (20 seconds):** A failed build produces console noise. JenkinsAI explains evidence and suggests reviewed next steps, with an open-weight model accessible through a web widget.
-2. **Evidence (40 seconds):** Open the assistant in Jenkins (or standalone), select a job and failed build, preview the redacted numbered log excerpt. Point out that previewing does not call Google. Review for secrets.
-3. **Analysis (60 seconds):** Enable log sharing, ask for the root cause. Show quoted line numbers, suggested verification, fix, Jenkinsfile improvement, and uncertainty. Ask a follow-up such as “Why shouldn't I chmod the Docker socket?” No command is executed.
-4. **General help (30 seconds):** Turn off log sharing, clear the chat, then ask “Explain Jenkins credentials binding and avoiding shell interpolation.”
-5. **Coding assistant (20 seconds):** Run `terminal_assistant.py`, preview a source file with `/file`, consent with `/attach`, and ask for a proposed improvement.
-6. **Open source (10 seconds):** Show the public GitHub repo, MIT license, tests, and clear boundaries: GET-only Jenkins access, no production actions, best-effort redaction, human review.
+1. Open the private Jenkins gateway at `http://127.0.0.1:8090/` and sign in.
+2. Open a failed build's **Console Output**. The bottom-right robot shows a short AI diagnosis with one cited line and next step. No chat or token entry is needed.
+3. Open a successful build whose console contains a real unresolved error. JenkinsAI should show **Jenkins: SUCCESS · Hidden issue** and explain the evidence. Contrast with a clean successful build.
+4. Open a running build's console. JenkinsAI waits and checks again every 15 seconds after completion.
+5. Show that the backend reads Jenkins with GET requests and cannot trigger builds or change pipeline configuration. The model only suggests what a person should verify.
 
-Use **live mode** for the actual model demo. The offline fixture is only rehearsal/fallback and must be identified as canned. Do not claim it proves model quality or live API integration.
-
-Optional Docker failure fixture (create manually in a disposable Jenkins job only):
-
-```groovy
-pipeline {
-  agent any
-  stages {
-    stage('Demo failure') {
-      steps {
-        echo 'ERROR: permission denied while trying to connect to the Docker daemon socket'
-        error('Intentional hackathon failure; no deployment performed')
-      }
-    }
-  }
-}
-```
-
-Label this as synthetic, not an actual Docker daemon test. Do not run it in a production pipeline. The assistant never creates or triggers this job.
+Use live mode to demonstrate Gemma. Demo mode gives canned fixture data and makes no model call. Restrict the reader account to trusted jobs because opening Console Output automatically sends a redacted excerpt to Gemma.

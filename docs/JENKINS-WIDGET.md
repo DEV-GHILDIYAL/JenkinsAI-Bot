@@ -1,19 +1,9 @@
-# Bottom-right Jenkins widget
+# Jenkins Console Output popup
 
-For a widget that stays available after every Jenkins page reload and server-side background build monitoring, follow [persistent monitoring setup](MONITORING.md). The private gateway serves Jenkins at port 8090 and loads the launcher on every page. The bookmarklet below is an optional temporary fallback.
+Open Jenkins through the private gateway at `http://127.0.0.1:8090/` (with SSH forwarding to the EC2 server). Sign in to Jenkins, then open any build's **Console Output** page. JenkinsAI appears at bottom right and automatically inspects that build. It does not appear on dashboards or other pages.
 
-The assistant homepage now includes **Add the bot to Jenkins**. Enter the browser-visible assistant URL (including a reverse-proxy prefix if used), then drag **Open JenkinsAI** to your bookmarks bar. Alternatively copy the generated URL into a bookmark. **Preview widget** opens the compact chat directly. Open Jenkins and click the saved bookmark to display the floating bot. Never include credentials in the assistant URL.
+The popup shows the Jenkins build result and a separate AI verdict: clean, issue found, failed, or review needed. A `SUCCESS` build can still show **Hidden issue** when its log has evidence of an unresolved error. The popup includes a short explanation, one evidence line, and one next step. While a build runs, it checks again every 15 seconds. The robot toggles the popup; **Check again** requests the result again. Completed diagnoses are cached in server memory.
 
-For the fastest demo, run the assistant privately via SSH forwarding and use the following bookmarklet on your Jenkins dashboard. Create a browser bookmark, edit its URL to this single line, then click it while Jenkins is open at `http://127.0.0.1:8080`:
+Opening Console Output sends a redacted, bounded log excerpt to Gemma automatically. There is no chat box, token field, or manual log-sharing step in the UI. The gateway checks the Jenkins browser session and adds the assistant token server-side. The backend reads Jenkins with its dedicated reader account, so gateway users can analyze every job visible to that account. Restrict the reader to trusted demo jobs. Redaction is best-effort and large logs may be incomplete.
 
-```javascript
-javascript:(()=>{if(document.getElementById('jenkinsai-demo'))return;const f=document.createElement('iframe');f.id='jenkinsai-demo';f.title='JenkinsAI read-only assistant';f.src='http://127.0.0.1:8000/?widget=1';f.style.cssText='position:fixed;right:24px;bottom:76px;width:min(415px,calc(100vw - 32px));height:min(760px,calc(100vh - 100px));border:0;border-radius:12px;z-index:2147483647';const b=document.createElement('button');b.textContent='Close JenkinsAI';b.style.cssText='position:fixed;right:24px;bottom:24px;padding:12px 18px;z-index:2147483647';b.onclick=()=>{f.hidden=!f.hidden;b.textContent=f.hidden?'Open JenkinsAI':'Close JenkinsAI'};document.body.append(f,b)})();
-```
-
-This only changes the current browser page. Reloading removes the widget. No Jenkins configuration, jobs, builds, credentials, or plugins are altered. Enter the assistant token inside the iframe in live mode. Do not place any token in the bookmarklet.
-
-The assistant allows framing only from itself and the exact `JENKINS_FRAME_ORIGIN`. Jenkins's own Content Security Policy may also block frames, bookmarklets, or external scripts. If blocked, open the standalone assistant; do not disable Jenkins security globally. HTTPS Jenkins pages cannot embed an HTTP assistant; use an HTTPS assistant/reverse proxy with compatible policy.
-
-For an administrator-approved persistent dashboard customization, `frontend/widget.js` creates the same bottom-right launcher and iframe. Load it with an external `<script src="https://YOUR_ASSISTANT/static/widget.js"></script>` only through an approved Jenkins customization mechanism and CSP. A Jenkins Java plugin is outside this MVP; this file does not install one.
-
-A cross-origin iframe isolates assistant UI from Jenkins page scripts. The supplied same-origin reverse-proxy gateway does not provide that isolation: trusted Jenkins page scripts can access the assistant frame. Backend Jenkins/Google credentials remain on the server. The gateway checks Jenkins login and adds the assistant token server-side. The backend uses the configured reader identity rather than the current Jenkins user's job permissions, so every signed-in gateway user can see jobs visible to that reader.
+The gateway injects `frontend/widget.js` into Jenkins pages, but the script mounts only on `/job/.../<build>/console` and `/consoleFull`. Direct Jenkins port `8080` does not include the popup. See [gateway setup](MONITORING.md).

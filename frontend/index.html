@@ -2,54 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>JenkinsAI · Build clarity</title>
-  <link rel="stylesheet" href="static/app.css"><script src="static/app.js" defer></script>
+  <title>JenkinsAI · Console inspector</title>
+  <style>
+    :root{color-scheme:light dark;font:16px/1.6 system-ui,sans-serif}
+    body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f5f7fa;color:#1f2937}
+    main{max-width:560px;padding:32px;margin:20px;background:#fff;border:1px solid #dce3ec;border-radius:16px;box-shadow:0 12px 35px #0001}
+    h1{font-size:28px;margin:0 0 8px}p{margin:8px 0;color:#4b5563}a{color:#2875b9}
+    @media(prefers-color-scheme:dark){body{background:#111821;color:#f1f5f9}main{background:#202c3b;border-color:#405166}p{color:#afc0d3}a{color:#73c5ff}}
+  </style>
 </head>
-<body>
-  <div class="workspace">
-    <header class="topbar"><a class="brand" href="./"><span class="mark">J</span> Jenkins<span>AI</span></a><span class="toplabel">DEVELOPER WORKSPACE</span><span class="pill">Read-only access</span></header>
-    <main>
-      <div class="eyebrow">AI BELONGS TO EVERYONE / HACKTOBERFEST 2026</div>
-      <h1>Failed builds.<br><span>Clear next steps.</span></h1>
-      <p class="intro">From console noise to an understandable diagnosis.<br>Inspect a build, ask a question, and review the next step.</p>
-      <div class="hero-actions"><button id="open-assistant">Open assistant ↗</button><span id="connection-state" role="status">Checking service…</span></div>
-      <section class="setup-card" aria-labelledby="setup-title">
-        <h2 id="setup-title">Add the bot to Jenkins</h2>
-        <p>The permanent launcher appears when you open Jenkins through the configured widget gateway. For a temporary launcher on your current Jenkins page, save the bookmark below.</p>
-        <label for="assistant-url">Browser-visible assistant URL</label>
-        <input id="assistant-url" type="url" placeholder="http://127.0.0.1:8000/" spellcheck="false">
-        <div class="setup-actions"><a id="widget-bookmark">Open JenkinsAI</a><button id="copy-widget" type="button">Copy bookmark URL</button><a id="widget-preview" target="_blank" rel="noopener noreferrer">Preview widget ↗</a></div>
-        <small id="setup-status" role="status">The bookmark is temporary. The installed widget gateway keeps the launcher available after reload.</small>
-        <details><summary>Using SSH forwarding on EC2?</summary><p>Open both forwarded services in your browser: assistant on port 8000 and Jenkins on port 8080. Set JENKINS_FRAME_ORIGIN to the Jenkins origin you use. If Jenkins blocks embedding, use this standalone chat.</p></details>
-      </section>
-      <div class="workflow"><span><b>01</b> Select a build</span><span><b>02</b> Inspect the evidence</span><span><b>03</b> Ask Gemma</span></div>
-      <section class="console-card"><div class="console-heading"><span>BUILD EVIDENCE</span><span id="evidence-badge">No build selected</span></div><pre id="evidence">Open the assistant and select a failed build.
-
-Previewing logs does not send them to Google.
-Review the excerpt before enabling log sharing.</pre></section>
-      <div class="footnote">Built with Gemma 4 · FastAPI · Jenkins REST API<br>No build triggers. No deployments. Your review comes first.</div>
-    </main>
-  </div>
-  <button id="launcher" aria-label="Open JenkinsAI assistant" aria-expanded="true">🤖</button>
-  <aside id="assistant" aria-label="JenkinsAI assistant">
-    <header class="chat-head">
-      <div class="avatar" aria-hidden="true"><svg viewBox="0 0 48 48" width="38" height="38"><path class="bot-antenna" d="M24 10V5m0 0h4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect x="6" y="10" width="36" height="30" rx="11" fill="currentColor"/><rect x="10" y="14" width="28" height="20" rx="8" fill="var(--bot-face)"/><g class="bot-eyes" fill="currentColor"><circle cx="18" cy="23" r="2.4"/><circle cx="30" cy="23" r="2.4"/></g><path d="M20 29q4 3 8 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
-      <div><strong>JenkinsAI</strong><small id="mode">Connecting…</small></div><button id="close" aria-label="Close assistant">×</button>
-    </header>
-    <details class="connection" open><summary>Connect to JenkinsAI</summary><div class="token-row"><label class="sr-only" for="token">Assistant access token</label><input id="token" type="password" autocomplete="off" placeholder="Assistant access token"><button id="connect">Connect</button></div></details>
-    <details class="monitor-panel" aria-label="Pipeline monitor"><summary><span>Pipelines</span><span id="monitor-badge">Connecting…</span></summary><p id="monitor-status" role="status">Watching for new builds on the server.</p><div id="monitor-events" role="log" aria-live="polite" aria-label="Build notifications"></div></details>
-    <details class="tools-panel" aria-label="Build selection"><summary>Analyze a build</summary><div class="build-context">
-      <div class="context-title"><span>Build evidence</span><button id="up" hidden>↑ Parent</button><button id="refresh">Refresh</button></div>
-      <label class="sr-only" for="jobs">Jenkins job or folder</label><select id="jobs"><option value="">Select job or folder</option></select>
-      <div class="build-row"><label class="sr-only" for="builds">Failed build</label><select id="builds" disabled><option value="">Select failed build</option></select><button id="preview" disabled>Preview logs</button></div>
-      <details id="preview-panel"><summary>Redacted log excerpt</summary><pre id="log-preview">Select a build to preview its logs.</pre><small id="log-info"></small></details>
-      <label class="consent"><input id="consent" type="checkbox"> Send this build’s redacted logs to Google with my question</label>
-    </div></details>
-    <div id="messages" role="log" aria-live="polite" aria-label="Conversation"></div>
-    <div class="suggestions"><button id="diagnose">Explain failure</button><button id="general">Jenkinsfile tips</button></div>
-    <div id="status" role="status"></div>
-    <form id="composer"><label class="sr-only" for="question">Your message</label><textarea id="question" rows="2" maxlength="12000" placeholder="Ask JenkinsAI…"></textarea><button id="send" type="submit" aria-label="Send message">↑</button></form>
-    <footer class="chat-foot"><button id="clear">Clear chat</button></footer>
-  </aside>
-</body>
+<body><main><h1>🤖 JenkinsAI</h1><p>Open a build’s <strong>Console Output</strong> in Jenkins. A small popup will analyze that build automatically, even when Jenkins marks it successful.</p><p>The popup shows the result, one evidence line, and the next step. It appears only on Console Output pages.</p><p><a href="/">Back to Jenkins</a></p></main></body>
 </html>
