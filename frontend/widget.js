@@ -62,6 +62,22 @@
     #jenkinsai-inspector .ai-form button{border:none;background:var(--accent);color:#fff;border-radius:8px;padding:0 16px;height:42px;font:600 12.5px system-ui,sans-serif;cursor:pointer;flex-shrink:0}
     #jenkinsai-inspector .ai-form button:hover{background:var(--accent-hover)}
 
+    /* Quick Prompt Suggestion Pills */
+    #jenkinsai-inspector .ai-quick-prompts{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px 4px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0}
+    #jenkinsai-inspector .ai-quick-pill{border:1px solid var(--border);background:var(--bg);color:var(--fg);font-size:11px;font-weight:500;padding:5px 10px;border-radius:20px;cursor:pointer;transition:all .15s ease;white-space:nowrap}
+    #jenkinsai-inspector .ai-quick-pill:hover{background:var(--accent);color:#fff;border-color:var(--accent);transform:translateY(-1px)}
+
+    /* Copy Report Button */
+    #jenkinsai-inspector .ai-copy-report{border:1px solid var(--border);background:var(--bg);color:var(--accent);font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:5px;cursor:pointer;transition:all .15s ease;margin-left:auto;white-space:nowrap}
+    #jenkinsai-inspector .ai-copy-report:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+    /* Inline Code Copy in Bot Messages */
+    #jenkinsai-inspector .ai-code-block{display:flex;align-items:center;gap:6px;background:var(--code-bg);border:1px solid var(--border);border-radius:6px;padding:6px 10px;margin:6px 0 2px;font-family:'Cascadia Code','Fira Code',monospace;font-size:11.5px;color:var(--fg);line-height:1.4}
+    #jenkinsai-inspector .ai-code-block code{flex:1;overflow-x:auto;white-space:pre-wrap;word-break:break-all}
+    #jenkinsai-inspector .ai-code-copy{border:none;background:transparent;color:var(--muted);font-size:14px;cursor:pointer;padding:2px 4px;border-radius:4px;flex-shrink:0;transition:color .15s}
+    #jenkinsai-inspector .ai-code-copy:hover{color:var(--accent)}
+    #jenkinsai-inspector .ai-code-copy.copied{color:var(--good)}
+
     /* Expressive Bot Face Launcher Button */
     #jenkinsai-inspector .ai-launcher{position:relative;margin-left:auto;width:56px;height:56px;border-radius:50%;border:2px solid var(--border);background:var(--bg);color:var(--accent);box-shadow:0 8px 24px -4px rgba(0,0,0,0.4);cursor:pointer;padding:0;display:grid;place-items:center;transition:all .2s cubic-bezier(0.34,1.56,0.64,1)}
     #jenkinsai-inspector .ai-launcher:hover{transform:scale(1.1) translateY(-2px);border-color:var(--accent);box-shadow:0 10px 28px -4px rgba(59,130,246,0.45)}
@@ -120,8 +136,15 @@
       </div>
       <div class="ai-context-banner">
         <span>Build Status: <strong class="ai-context-status">Inspecting...</strong></span>
+        <button class="ai-copy-report" type="button" title="Copy bug report to clipboard">📋 Copy Report</button>
       </div>
       <div class="ai-thread" aria-live="polite"></div>
+      <div class="ai-quick-prompts">
+        <button class="ai-quick-pill" type="button" data-prompt="Explain the exact line that failed">🔍 Explain failure line</button>
+        <button class="ai-quick-pill" type="button" data-prompt="Is this an Application Code bug or a DevOps Infra issue?">🎯 App or Infra bug?</button>
+        <button class="ai-quick-pill" type="button" data-prompt="Give me the exact terminal command to fix this">⚡ Fix command</button>
+        <button class="ai-quick-pill" type="button" data-prompt="Summarize this build failure for a Jira ticket">📝 Jira summary</button>
+      </div>
       <form class="ai-form">
         <label class="sr-only" for="jenkinsai-question">Question</label>
         <textarea id="jenkinsai-question" rows="2" maxlength="12000" placeholder="Ask anything about this build or other pipelines..."></textarea>
@@ -153,6 +176,8 @@
   const chatPanel = root.querySelector(".ai-chat-panel");
   const panelClose = root.querySelector(".ai-panel-close");
   const langSelect = root.querySelector(".ai-lang-select");
+  const copyReportBtn = root.querySelector(".ai-copy-report");
+  const quickPromptContainer = root.querySelector(".ai-quick-prompts");
   const contextStatus = root.querySelector(".ai-context-status");
   const launcher = root.querySelector(".ai-launcher");
   const mouth = root.querySelector(".ai-mouth");
@@ -224,12 +249,48 @@
   toastClose.onclick = () => { toast.hidden = true; };
   panelClose.onclick = () => { chatPanel.hidden = true; launcher.setAttribute("aria-expanded", "false"); };
   function addChat(role, text) {
-    const node = document.createElement("p");
+    const node = document.createElement("div");
     node.className = "ai-msg";
     node.dataset.role = role;
-    node.textContent = text;
+    if (role === "model") {
+      // Parse text: detect backtick-wrapped commands and render with copy buttons
+      const parts = text.split(/(`.+?`)/g);
+      parts.forEach(part => {
+        if (/^`.+`$/.test(part)) {
+          const cmd = part.slice(1, -1);
+          const block = document.createElement("div");
+          block.className = "ai-code-block";
+          const codeEl = document.createElement("code");
+          codeEl.textContent = cmd;
+          const copyBtn = document.createElement("button");
+          copyBtn.type = "button";
+          copyBtn.className = "ai-code-copy";
+          copyBtn.textContent = "📋";
+          copyBtn.title = "Copy command";
+          copyBtn.onclick = () => {
+            navigator.clipboard.writeText(cmd).then(() => {
+              copyBtn.textContent = "✅";
+              copyBtn.classList.add("copied");
+              setTimeout(() => { copyBtn.textContent = "📋"; copyBtn.classList.remove("copied"); }, 1500);
+            });
+          };
+          block.append(codeEl, copyBtn);
+          node.append(block);
+        } else if (part) {
+          const span = document.createElement("span");
+          span.textContent = part;
+          node.append(span);
+        }
+      });
+    } else {
+      node.textContent = text;
+    }
     thread.append(node);
     thread.scrollTop = thread.scrollHeight;
+    // Hide quick prompts after first user message
+    if (role === "user" && quickPromptContainer) {
+      quickPromptContainer.hidden = true;
+    }
   }
   async function submitQuestion(event) {
     if (event) {
@@ -291,6 +352,51 @@
       submitQuestion(event);
     }
   };
+
+  // Quick Prompt Pills — click to auto-send
+  if (quickPromptContainer) {
+    quickPromptContainer.addEventListener("click", (e) => {
+      const pill = e.target.closest(".ai-quick-pill");
+      if (!pill) return;
+      const prompt = pill.dataset.prompt;
+      if (!prompt || chatting) return;
+      question.value = prompt;
+      submitQuestion();
+    });
+  }
+
+  // Copy Jira / Slack Bug Report
+  if (copyReportBtn) {
+    copyReportBtn.onclick = () => {
+      if (!cachedDiagnosis) {
+        copyReportBtn.textContent = "⏳ Wait...";
+        setTimeout(() => { copyReportBtn.textContent = "📋 Copy Report"; }, 1200);
+        return;
+      }
+      const d = cachedDiagnosis;
+      const catTag = d.category === "APPLICATION" ? "APPLICATION CODE ISSUE (Dev Action Required)"
+        : d.category === "DEVOPS" ? "DEVOPS / INFRA ISSUE (Infra Team Action)" : "UNCERTAIN";
+      const report = [
+        `🚨 Jenkins Build Failure Report`,
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+        `• Job:            ${chatJob} #${chatBuild}`,
+        `• Result:         ${d.jenkins_result || d.verdict}`,
+        `• Classification: ${catTag}`,
+        `• Root Cause:     ${d.summary || "N/A"}`,
+        `• Evidence:       ${d.evidence || "N/A"}`,
+        `• Suggested Fix:  ${d.next || "N/A"}`,
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+        `Generated by JenkinsAI Bot`
+      ].join("\n");
+      navigator.clipboard.writeText(report).then(() => {
+        copyReportBtn.textContent = "✅ Copied!";
+        setTimeout(() => { copyReportBtn.textContent = "📋 Copy Report"; }, 2000);
+      }).catch(() => {
+        copyReportBtn.textContent = "❌ Failed";
+        setTimeout(() => { copyReportBtn.textContent = "📋 Copy Report"; }, 2000);
+      });
+    };
+  }
   let timer;
   async function inspect() {
     clearTimeout(timer);
