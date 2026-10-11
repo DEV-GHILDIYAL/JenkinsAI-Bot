@@ -17,51 +17,47 @@
 
   const style = document.createElement("style");
   style.textContent = `
-    #jenkinsai-inspector{--bg:#ffffff;--fg:#0f172a;--muted:#64748b;--border:#e2e8f0;--accent:#2563eb;--accent-hover:#1d4ed8;--accent-soft:rgba(37,99,235,0.08);--good:#059669;--bad:#dc2626;--warn:#d97706;--surface-elevated:#ffffff;--shadow:0 16px 40px -4px rgba(0,0,0,0.22),0 4px 16px -2px rgba(0,0,0,0.1);position:fixed;right:22px;bottom:20px;z-index:2147483647;color:var(--fg);font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
-    #jenkinsai-inspector[data-theme=dark]{--bg:#0f172a;--fg:#f8fafc;--muted:#94a3b8;--border:#334155;--accent:#38bdf8;--accent-hover:#0284c7;--accent-soft:rgba(56,189,248,0.12);--good:#34d399;--bad:#f87171;--warn:#fbbf24;--surface-elevated:#1e293b;--shadow:0 20px 48px -4px rgba(0,0,0,0.6),0 6px 20px rgba(0,0,0,0.35)}
+    #jenkinsai-inspector{--bg:#1e2430;--fg:#f1f5f9;--muted:#94a3b8;--border:#334155;--accent:#3b82f6;--accent-hover:#2563eb;--accent-soft:rgba(59,130,246,0.12);--good:#10b981;--bad:#ef4444;--warn:#f59e0b;--surface:#151a23;--code-bg:#0f131a;--shadow:0 24px 60px -8px rgba(0,0,0,0.65),0 8px 24px rgba(0,0,0,0.4);position:fixed;right:24px;bottom:20px;z-index:2147483647;color:var(--fg);font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+    #jenkinsai-inspector[data-theme=light]{--bg:#ffffff;--fg:#0f172a;--muted:#64748b;--border:#e2e8f0;--accent:#2563eb;--accent-hover:#1d4ed8;--accent-soft:rgba(37,99,235,0.08);--good:#059669;--bad:#dc2626;--warn:#d97706;--surface:#f8fafc;--code-bg:#f1f5f9;--shadow:0 20px 48px -6px rgba(0,0,0,0.2),0 6px 18px rgba(0,0,0,0.08)}
     #jenkinsai-inspector *{box-sizing:border-box}
-    #jenkinsai-inspector .ai-popup{width:min(420px,calc(100vw - 36px));max-height:min(720px,calc(100vh - 120px));display:flex;flex-direction:column;margin:0 0 12px auto;background:var(--bg);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);overflow:hidden;backdrop-filter:blur(16px);animation:ai-appear .24s cubic-bezier(0.16,1,0.3,1)}
+    #jenkinsai-inspector .ai-popup{width:min(460px,calc(100vw - 36px));height:calc(100vh - 110px);max-height:860px;min-height:520px;display:flex;flex-direction:column;margin:0 0 14px auto;background:var(--bg);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;animation:ai-slideup .2s cubic-bezier(0.16,1,0.3,1)}
     #jenkinsai-inspector .ai-popup[hidden],#jenkinsai-inspector [hidden]{display:none!important}
-    #jenkinsai-inspector .ai-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--accent-soft);flex-shrink:0}
-    #jenkinsai-inspector .ai-dot{width:9px;height:9px;border-radius:50%;background:var(--accent);flex:none;box-shadow:0 0 0 3px rgba(37,99,235,0.18)}
-    #jenkinsai-inspector[data-verdict=clean] .ai-dot{background:var(--good);box-shadow:0 0 0 3px rgba(5,150,105,0.18)}
-    #jenkinsai-inspector[data-verdict=issue] .ai-dot,#jenkinsai-inspector[data-verdict=failed] .ai-dot,#jenkinsai-inspector[data-verdict=error] .ai-dot{background:var(--bad);box-shadow:0 0 0 3px rgba(220,38,38,0.2)}
-    #jenkinsai-inspector[data-verdict=uncertain] .ai-dot{background:var(--warn);box-shadow:0 0 0 3px rgba(217,119,6,0.18)}
-    #jenkinsai-inspector .ai-head-titles{flex:1;display:flex;align-items:baseline;gap:8px;overflow:hidden}
-    #jenkinsai-inspector .ai-head strong{font-size:14px;font-weight:700;letter-spacing:-0.2px;white-space:nowrap}
-    #jenkinsai-inspector .ai-result{font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #jenkinsai-inspector .ai-head{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+    #jenkinsai-inspector .ai-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;padding:3px 9px;border-radius:6px;background:rgba(59,130,246,0.15);color:var(--accent)}
+    #jenkinsai-inspector[data-verdict=clean] .ai-badge{background:rgba(16,185,129,0.15);color:var(--good)}
+    #jenkinsai-inspector[data-verdict=issue] .ai-badge,#jenkinsai-inspector[data-verdict=failed] .ai-badge,#jenkinsai-inspector[data-verdict=error] .ai-badge{background:rgba(239,68,68,0.15);color:var(--bad)}
+    #jenkinsai-inspector[data-verdict=uncertain] .ai-badge{background:rgba(245,158,11,0.15);color:var(--warn)}
+    #jenkinsai-inspector .ai-dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+    #jenkinsai-inspector .ai-head-titles{flex:1;display:flex;align-items:center;gap:8px;overflow:hidden}
+    #jenkinsai-inspector .ai-head strong{font-size:13.5px;font-weight:600;letter-spacing:-0.2px;white-space:nowrap}
+    #jenkinsai-inspector .ai-result{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     #jenkinsai-inspector button{cursor:pointer;transition:all .15s ease}
-    #jenkinsai-inspector .ai-close{border:0;background:transparent;color:var(--muted);font-size:18px;line-height:1;padding:3px 7px;border-radius:6px;flex-shrink:0}
-    #jenkinsai-inspector .ai-close:hover{background:rgba(0,0,0,0.06);color:var(--fg)}
-    #jenkinsai-inspector .ai-body{padding:14px 16px 12px;overflow-y:auto;flex-shrink:0}
-    #jenkinsai-inspector .ai-summary{margin:0 0 10px;font-size:13.5px;font-weight:650;line-height:1.5;color:var(--fg);letter-spacing:-0.1px}
-    #jenkinsai-inspector .ai-evidence,#jenkinsai-inspector .ai-next{margin:7px 0;padding:8px 11px;border-radius:10px;background:var(--accent-soft);color:var(--fg);font-size:12px;overflow-wrap:anywhere;line-height:1.5}
-    #jenkinsai-inspector .ai-evidence{border-left:3px solid var(--bad);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:11.5px}
+    #jenkinsai-inspector .ai-close{border:0;background:transparent;color:var(--muted);font-size:18px;line-height:1;padding:4px 8px;border-radius:6px;flex-shrink:0}
+    #jenkinsai-inspector .ai-close:hover{background:var(--accent-soft);color:var(--fg)}
+    #jenkinsai-inspector .ai-body{padding:14px 18px 12px;overflow-y:auto;flex-shrink:0;background:var(--bg);border-bottom:1px solid var(--border)}
+    #jenkinsai-inspector .ai-summary{margin:0 0 10px;font-size:14px;font-weight:600;line-height:1.5;color:var(--fg)}
+    #jenkinsai-inspector .ai-evidence,#jenkinsai-inspector .ai-next{margin:8px 0;padding:9px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--fg);font-size:12px;overflow-wrap:anywhere;line-height:1.55}
+    #jenkinsai-inspector .ai-evidence{border-left:3px solid var(--bad);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;background:var(--code-bg);font-size:11.5px}
     #jenkinsai-inspector .ai-next{border-left:3px solid var(--accent)}
-    #jenkinsai-inspector .ai-memory{margin:6px 0;padding:6px 10px;border-radius:8px;background:rgba(37,99,235,0.08);color:var(--accent);font-size:11.5px;overflow-wrap:anywhere}
-    #jenkinsai-inspector .ai-actions{display:flex;justify-content:flex-end;align-items:center;gap:7px;padding:8px 16px 10px;border-top:1px solid var(--border);flex-shrink:0}
-    #jenkinsai-inspector .ai-refresh,#jenkinsai-inspector .ai-ask,#jenkinsai-inspector .ai-remember{border:1px solid var(--border);background:var(--bg);font:inherit;font-size:12px;font-weight:550;color:var(--muted);padding:5px 11px;border-radius:8px}
+    #jenkinsai-inspector .ai-memory{margin:6px 0;padding:7px 11px;border-radius:8px;background:var(--accent-soft);color:var(--accent);font-size:12px;overflow-wrap:anywhere}
+    #jenkinsai-inspector .ai-actions{display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:8px 18px 9px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+    #jenkinsai-inspector .ai-refresh,#jenkinsai-inspector .ai-ask,#jenkinsai-inspector .ai-remember{border:1px solid var(--border);background:var(--bg);font:inherit;font-size:11.5px;font-weight:550;color:var(--muted);padding:5px 11px;border-radius:6px}
     #jenkinsai-inspector .ai-refresh:hover,#jenkinsai-inspector .ai-ask:hover,#jenkinsai-inspector .ai-remember:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
-    #jenkinsai-inspector .ai-refresh{color:var(--accent);border-color:var(--accent-soft)}
-    #jenkinsai-inspector .ai-chat{border-top:1px solid var(--border);padding:12px 16px;background:var(--accent-soft);display:flex;flex-direction:column;flex:1;min-height:0}
-    #jenkinsai-inspector .ai-thread{flex:1;min-height:90px;max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px;padding-right:2px}
-    #jenkinsai-inspector .ai-msg{margin:0;font-size:12px;line-height:1.5;overflow-wrap:anywhere;padding:8px 12px;border-radius:12px}
-    #jenkinsai-inspector .ai-msg[data-role=user]{background:var(--accent);color:#ffffff;margin-left:26px;border-bottom-right-radius:3px}
-    #jenkinsai-inspector .ai-msg[data-role=model]{background:var(--bg);border:1px solid var(--border);color:var(--fg);border-bottom-left-radius:3px}
-    #jenkinsai-inspector .ai-form{display:flex;gap:7px;align-items:flex-end}
-    #jenkinsai-inspector .ai-form textarea{flex:1;resize:none;min-height:38px;max-height:90px;border:1px solid var(--border);border-radius:10px;padding:8px 11px;background:var(--bg);color:var(--fg);font:12px/1.45 system-ui,sans-serif;outline:none}
+    #jenkinsai-inspector .ai-refresh{color:var(--accent)}
+    #jenkinsai-inspector .ai-chat{display:flex;flex-direction:column;flex:1;min-height:0;background:var(--surface);padding:12px 18px 14px}
+    #jenkinsai-inspector .ai-thread{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:9px;margin-bottom:12px;padding-right:3px}
+    #jenkinsai-inspector .ai-msg{margin:0;font-size:12.5px;line-height:1.55;overflow-wrap:anywhere;padding:9px 13px;border-radius:10px}
+    #jenkinsai-inspector .ai-msg[data-role=user]{background:var(--accent);color:#ffffff;margin-left:32px;border-bottom-right-radius:2px}
+    #jenkinsai-inspector .ai-msg[data-role=model]{background:var(--bg);border:1px solid var(--border);color:var(--fg);border-bottom-left-radius:2px}
+    #jenkinsai-inspector .ai-form{display:flex;gap:8px;align-items:flex-end;flex-shrink:0}
+    #jenkinsai-inspector .ai-form textarea{flex:1;resize:none;min-height:42px;max-height:110px;border:1px solid var(--border);border-radius:8px;padding:9px 12px;background:var(--bg);color:var(--fg);font:12.5px/1.45 system-ui,sans-serif;outline:none}
     #jenkinsai-inspector .ai-form textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
-    #jenkinsai-inspector .ai-form button{border:none;background:var(--accent);color:#fff;border-radius:10px;padding:0 14px;height:38px;font:650 12px system-ui,sans-serif;flex-shrink:0}
+    #jenkinsai-inspector .ai-form button{border:none;background:var(--accent);color:#fff;border-radius:8px;padding:0 16px;height:42px;font:600 12.5px system-ui,sans-serif;flex-shrink:0}
     #jenkinsai-inspector .ai-form button:hover{background:var(--accent-hover)}
-    #jenkinsai-inspector .ai-bot{display:block;margin-left:auto;width:64px;height:72px;padding:0;border:0;background:transparent;color:var(--accent);filter:drop-shadow(0 6px 12px rgba(0,0,0,0.18));cursor:pointer;transition:transform .2s cubic-bezier(0.34,1.56,0.64,1)}
-    #jenkinsai-inspector .ai-bot:hover{transform:scale(1.08) translateY(-2px)}
-    #jenkinsai-inspector .ai-bot svg{width:64px;height:72px;animation:ai-breathe 3.5s ease-in-out infinite}
-    #jenkinsai-inspector .ai-face{fill:var(--bg)}
-    #jenkinsai-inspector .ai-eyes{transform-origin:center;animation:ai-blink 4.5s infinite}
-    #jenkinsai-inspector[data-verdict=loading] .ai-head-part{transform-origin:40px 35px;animation:ai-think 1s ease-in-out infinite}
-    #jenkinsai-inspector[data-verdict=issue] .ai-bot,#jenkinsai-inspector[data-verdict=failed] .ai-bot{color:var(--bad)}
-    #jenkinsai-inspector[data-verdict=issue] .ai-arm,#jenkinsai-inspector[data-verdict=failed] .ai-arm{transform-origin:57px 57px;animation:ai-wave .6s ease-in-out 4}
-    @keyframes ai-appear{from{opacity:0;transform:translateY(12px) scale(0.97)}to{opacity:1;transform:none}}@keyframes ai-breathe{50%{transform:translateY(-3px)}}@keyframes ai-blink{0%,45%,48%,100%{transform:scaleY(1)}46%{transform:scaleY(.15)}}@keyframes ai-think{50%{transform:rotate(-8deg)}}@keyframes ai-wave{25%,75%{transform:rotate(-28deg)}50%{transform:rotate(17deg)}}
+    #jenkinsai-inspector .ai-launcher{display:flex;align-items:center;gap:8px;margin-left:auto;padding:8px 14px;border:1px solid var(--border);border-radius:24px;background:var(--bg);color:var(--fg);font:600 12.5px system-ui,sans-serif;box-shadow:0 8px 24px -4px rgba(0,0,0,0.35);cursor:pointer;transition:all .18s ease}
+    #jenkinsai-inspector .ai-launcher:hover{background:var(--accent);border-color:var(--accent);color:#ffffff;transform:translateY(-2px);box-shadow:0 10px 28px -4px rgba(59,130,246,0.4)}
+    #jenkinsai-inspector .ai-launcher svg{width:18px;height:18px;flex:none}
+    @keyframes ai-slideup{from{opacity:0;transform:translateY(14px) scale(0.98)}to{opacity:1;transform:none}}
     #jenkinsai-inspector .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
     @media(prefers-reduced-motion:reduce){#jenkinsai-inspector *,#jenkinsai-inspector *:before{animation:none!important}}
   `;
@@ -69,16 +65,17 @@
   const root = document.createElement("div");
   root.id = "jenkinsai-inspector";
   root.dataset.verdict = "loading";
-  root.innerHTML = `<section class="ai-popup" role="status" aria-live="polite"><div class="ai-head"><span class="ai-dot"></span><div class="ai-head-titles"><strong>Checking console…</strong><span class="ai-result"></span></div><button class="ai-close" type="button" aria-label="Close diagnosis">×</button></div><div class="ai-body"><p class="ai-summary">JenkinsAI is reading this build.</p><p class="ai-evidence" hidden></p><p class="ai-next" hidden></p><p class="ai-memory" hidden></p></div><div class="ai-actions"><button class="ai-remember" type="button" hidden>Remember this cause</button><button class="ai-ask" type="button" hidden>Ask about this build</button><button class="ai-refresh" type="button">Check again</button></div><div class="ai-chat" hidden><div class="ai-thread" aria-live="polite"></div><form class="ai-form"><label class="sr-only" for="jenkinsai-question">Question about this build</label><textarea id="jenkinsai-question" rows="2" maxlength="12000" placeholder="Ask why this failed or mention another job/build..."></textarea><button type="submit">Ask</button></form></div></section><button class="ai-bot" type="button" aria-label="Show JenkinsAI diagnosis" aria-expanded="true" title="JenkinsAI diagnosis"><svg viewBox="0 0 80 96" aria-hidden="true"><g stroke="currentColor" stroke-width="7" stroke-linecap="round"><path d="M32 72v14h-7M48 72v14h7"/><path d="M23 57 13 66 8 60"/><path class="ai-arm" d="M57 57 67 47 70 38"/></g><rect x="23" y="48" width="34" height="31" rx="12" fill="currentColor"/><rect x="31" y="55" width="18" height="13" rx="6" class="ai-face"/><g class="ai-head-part"><path d="M40 15V8m0 0h4" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><rect x="15" y="15" width="50" height="37" rx="14" fill="currentColor"/><rect x="20" y="20" width="40" height="27" rx="10" class="ai-face"/><g class="ai-eyes" fill="currentColor"><circle cx="32" cy="32" r="3"/><circle cx="48" cy="32" r="3"/></g><path d="M34 40q6 4 12 0" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></g></svg></button>`;
+  root.innerHTML = `<section class="ai-popup" role="status" aria-live="polite"><div class="ai-head"><div class="ai-badge"><span class="ai-dot"></span><strong class="ai-badge-text">Diagnosing</strong></div><div class="ai-head-titles"><strong>Jenkins Console</strong><span class="ai-result"></span></div><button class="ai-close" type="button" aria-label="Close panel">×</button></div><div class="ai-body"><p class="ai-summary">JenkinsAI is reading this build.</p><p class="ai-evidence" hidden></p><p class="ai-next" hidden></p><p class="ai-memory" hidden></p></div><div class="ai-actions"><button class="ai-remember" type="button" hidden>Remember cause</button><button class="ai-ask" type="button" hidden>Hide chat</button><button class="ai-refresh" type="button">Re-inspect</button></div><div class="ai-chat"><div class="ai-thread" aria-live="polite"></div><form class="ai-form"><label class="sr-only" for="jenkinsai-question">Question about this build</label><textarea id="jenkinsai-question" rows="2" maxlength="12000" placeholder="Ask anything about this build failure or error logs..."></textarea><button type="submit">Send</button></form></div></section><button class="ai-launcher" type="button" aria-label="Show Jenkins AI Assistant" aria-expanded="true" title="Jenkins AI Assistant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v1H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3V5a3 3 0 0 0-3-3z"/><circle cx="9" cy="13" r="1.5"/><circle cx="15" cy="13" r="1.5"/><path d="M9 17h6"/></svg><span>JenkinsAI</span></button>`;
   document.body.append(root);
   const popup = root.querySelector(".ai-popup");
   const title = root.querySelector(".ai-head strong");
+  const badgeText = root.querySelector(".ai-badge-text");
   const result = root.querySelector(".ai-result");
   const summary = root.querySelector(".ai-summary");
   const evidence = root.querySelector(".ai-evidence");
   const next = root.querySelector(".ai-next");
   const memoryNote = root.querySelector(".ai-memory");
-  const bot = root.querySelector(".ai-bot");
+  const bot = root.querySelector(".ai-launcher");
   const ask = root.querySelector(".ai-ask");
   const remember = root.querySelector(".ai-remember");
   const chat = root.querySelector(".ai-chat");
@@ -216,8 +213,9 @@
         addChat("model", "Ask about this build, or name another pipeline and build number. JenkinsAI answers build questions.");
       }
       root.dataset.verdict = data.verdict.toLowerCase();
-      title.textContent = ({CLEAN: "No issue found", ISSUE: "Issue found", FAILED: "Build failed", UNCERTAIN: "Review needed"})[data.verdict] || "Review needed";
-      result.textContent = `Jenkins: ${data.jenkins_result || "UNKNOWN"}${data.verdict === "ISSUE" && data.jenkins_result === "SUCCESS" ? " · Hidden issue" : ""}`;
+      if (badgeText) badgeText.textContent = data.verdict;
+      title.textContent = ({CLEAN: "No issue found", ISSUE: "Issue detected", FAILED: "Build failed", UNCERTAIN: "Review needed"})[data.verdict] || "Review needed";
+      result.textContent = `Build #${build} · ${data.jenkins_result || "UNKNOWN"}`;
       summary.textContent = data.summary || "Review the console.";
       showText(evidence, data.evidence, "Evidence: ");
       showText(next, data.next, "Next: ");
@@ -232,18 +230,19 @@
       }
       if (["ISSUE", "FAILED"].includes(data.verdict)) {
         remember.hidden = false;
-        remember.textContent = data.memory_match || remembered ? "Already remembered" : "Remember this cause";
+        remember.textContent = data.memory_match || remembered ? "Already remembered" : "Remember cause";
         remember.disabled = Boolean(data.memory_match || remembered);
       }
       if (data.partial_log && data.verdict === "UNCERTAIN") showText(next, "Open the full log to confirm; this analysis used an excerpt.", "Next: ");
     } catch (error) {
       root.dataset.verdict = "error";
+      if (badgeText) badgeText.textContent = "Error";
       title.textContent = "Analysis unavailable";
       const isModelError = /Gemma|API|token|quota|rephrase/i.test(error.message || "");
       summary.textContent = isModelError
         ? `${error.message}. You can retry or verify build logs in Jenkins.`
         : (error.message || "Could not complete analysis. Check connection and retry.");
-      result.textContent = `Build #${build} · Diagnosis error`;
+      result.textContent = `Build #${build} · Unavailable`;
       ask.hidden = false;
       ask.textContent = "Ask manually";
     }
