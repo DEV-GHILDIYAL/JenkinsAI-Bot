@@ -56,7 +56,21 @@ class Gemma:
             parts = candidates[0].get("content", {}).get("parts", []) if candidates else []
             answer = "\n".join(p.get("text", "") for p in parts if not p.get("thought"))
             if not answer.strip():
-                raise HTTPException(502, "Gemma returned no answer; retry or rephrase")
+                # Fallback: check if model returned text in another candidate or inside thought/other parts
+                for cand in candidates:
+                    for p in cand.get("content", {}).get("parts", []):
+                        if p.get("text", "").strip():
+                            answer = p.get("text", "")
+                            break
+                    if answer.strip():
+                        break
+            if not answer.strip():
+                finish_reason = candidates[0].get("finishReason") if candidates else "UNKNOWN"
+                if finish_reason in {"SAFETY", "RECITATION", "BLOCKLIST"}:
+                    raise HTTPException(502, f"Gemma response blocked by filter ({finish_reason}). Retry with a shorter or redacted excerpt.")
+                raise HTTPException(502, "Gemma returned an empty response. Click 'Check again' or rephrase your question.")
             return redact(answer, self.s.secrets())
+        except HTTPException:
+            raise
         except (httpx.HTTPError, ValueError, KeyError, TypeError):
             raise HTTPException(502, "Gemma API unavailable or returned an invalid response") from None
