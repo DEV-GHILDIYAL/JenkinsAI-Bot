@@ -98,6 +98,14 @@
   new MutationObserver(syncTheme).observe(document.body, {attributes: true, attributeFilter: ["class", "style", "data-theme"]});
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", syncTheme);
   function showText(node, value, prefix) { node.textContent = value && value !== "None" ? `${prefix}${value}` : ""; node.hidden = !node.textContent; }
+  async function errorMessage(response, action) {
+    let detail = "";
+    try {
+      const data = await response.json();
+      if (typeof data.detail === "string") detail = data.detail;
+    } catch { /* Non-JSON proxy errors use the generic status message. */ }
+    return detail || `${action} (${response.status}).`;
+  }
   bot.onclick = () => { popup.hidden = !popup.hidden; bot.setAttribute("aria-expanded", String(!popup.hidden)); };
   root.querySelector(".ai-close").onclick = () => { popup.hidden = true; bot.setAttribute("aria-expanded", "false"); };
   root.querySelector(".ai-refresh").onclick = () => inspect();
@@ -130,7 +138,7 @@
     form.querySelector("button").disabled = true;
     try {
       const response = await fetch(chatApi, {method: "POST", credentials: "same-origin", headers: {"Content-Type": "application/json"}, body: JSON.stringify({messages: candidate, job: chatJob, build: chatBuild, share_logs: true})});
-      if (!response.ok) throw new Error(response.status === 429 ? "Analysis busy. Try again shortly." : `Could not answer (${response.status}).`);
+      if (!response.ok) throw new Error(response.status === 429 ? "Analysis busy. Try again shortly." : await errorMessage(response, "Could not answer"));
       const data = await response.json();
       const answer = data.answer || "I only answer questions about this Jenkins build.";
       if (!data.refused) {
@@ -165,7 +173,7 @@
     remember.hidden = true;
     try {
       const response = await fetch(api, {method: "POST", credentials: "same-origin", headers: {"Content-Type": "application/json"}, body: JSON.stringify({job: jobs.join("/"), build})});
-      if (!response.ok) throw new Error(response.status === 429 ? "Analysis busy. Try again shortly." : `Could not analyze build (${response.status}).`);
+      if (!response.ok) throw new Error(response.status === 429 ? "Analysis busy. Try again shortly." : await errorMessage(response, "Could not analyze build"));
       const data = await response.json();
       if (data.status === "running") {
         title.textContent = "Pipeline running";

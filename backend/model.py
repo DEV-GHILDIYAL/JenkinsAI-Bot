@@ -39,7 +39,18 @@ class Gemma:
                     json={"systemInstruction": {"parts": [{"text": SYSTEM}]}, "contents": contents, "generationConfig": {"temperature": 0.2, "maxOutputTokens": 900}},
                 )
             if response.status_code != 200:
-                raise HTTPException(502, "Gemma API rejected the request; check model access, key, and quota")
+                    reason = {
+                        400: "request or model configuration is invalid",
+                        401: "API key was rejected",
+                        403: "API key or model access was denied",
+                        404: "configured model was not found",
+                        429: "API quota or rate limit was reached",
+                    }.get(response.status_code, "provider request failed")
+                    raise HTTPException(
+                        502,
+                        f"Gemma API returned HTTP {response.status_code}: {reason}. "
+                        "Check GEMINI_API_KEY, GEMMA_MODEL, model access, and quota.",
+                    )
             data = response.json()
             candidates = data.get("candidates", [])
             parts = candidates[0].get("content", {}).get("parts", []) if candidates else []

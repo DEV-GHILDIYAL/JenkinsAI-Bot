@@ -114,6 +114,21 @@ def test_provider_failure_does_not_echo_secrets():
     with pytest.raises(HTTPException) as e:
         asyncio.run(ai.chat([Message(role="user", content="hi")]))
     assert "test-gemini-key" not in e.value.detail
+    assert "HTTP 403" in e.value.detail
+    assert "access was denied" in e.value.detail
+
+
+@pytest.mark.parametrize(
+    ("status", "reason"),
+    [(401, "API key was rejected"), (404, "configured model was not found"), (429, "quota or rate limit")],
+)
+def test_provider_rejections_report_safe_diagnostic(status, reason):
+    ai = Gemma(live(), httpx.MockTransport(lambda req: httpx.Response(status, text="private provider body")))
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(ai.chat([Message(role="user", content="hi")]))
+    assert f"HTTP {status}" in error.value.detail
+    assert reason in error.value.detail
+    assert "private provider body" not in error.value.detail
 
 
 def test_chat_refuses_off_topic_without_calling_the_model():
