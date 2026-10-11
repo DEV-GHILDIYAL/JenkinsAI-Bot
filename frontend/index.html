@@ -30,27 +30,26 @@ Review the excerpt before enabling log sharing.</pre></section>
       <div class="footnote">Built with Gemma 4 · FastAPI · Jenkins REST API<br>No build triggers. No deployments. Your review comes first.</div>
     </main>
   </div>
-  <button id="launcher" aria-label="Open JenkinsAI assistant" aria-expanded="true">Ask JenkinsAI <span>↗</span></button>
+  <button id="launcher" aria-label="Open JenkinsAI assistant" aria-expanded="true">🤖</button>
   <aside id="assistant" aria-label="JenkinsAI assistant">
-    <header class="chat-head"><div class="avatar">J</div><div><strong>JenkinsAI</strong><small id="mode">Connecting…</small></div><button id="close" aria-label="Close assistant">×</button></header>
-    <div class="connection"><label for="token">Assistant access token</label><div class="token-row"><input id="token" type="password" autocomplete="off" placeholder="Required in live mode"><button id="connect">Connect</button></div></div>
-    <section class="monitor-panel" aria-label="Pipeline monitor">
-      <div class="context-title">PIPELINE MONITOR <span id="monitor-badge">Connecting…</span></div>
-      <p id="monitor-status" role="status">Watching for new builds on the server.</p>
-      <div id="monitor-events" role="log" aria-live="polite" aria-label="Build notifications"></div>
-    </section>
-    <section class="build-context" aria-label="Build selection">
-      <div class="context-title">BUILD CONTEXT <button id="up" hidden>↑ Parent</button><button id="refresh">Refresh</button></div>
+    <header class="chat-head">
+      <div class="avatar" aria-hidden="true"><svg viewBox="0 0 48 48" width="38" height="38"><path class="bot-antenna" d="M24 10V5m0 0h4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect x="6" y="10" width="36" height="30" rx="11" fill="currentColor"/><rect x="10" y="14" width="28" height="20" rx="8" fill="var(--bot-face)"/><g class="bot-eyes" fill="currentColor"><circle cx="18" cy="23" r="2.4"/><circle cx="30" cy="23" r="2.4"/></g><path d="M20 29q4 3 8 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+      <div><strong>JenkinsAI</strong><small id="mode">Connecting…</small></div><button id="close" aria-label="Close assistant">×</button>
+    </header>
+    <details class="connection" open><summary>Connect to JenkinsAI</summary><div class="token-row"><label class="sr-only" for="token">Assistant access token</label><input id="token" type="password" autocomplete="off" placeholder="Assistant access token"><button id="connect">Connect</button></div></details>
+    <details class="monitor-panel" aria-label="Pipeline monitor"><summary><span>Pipelines</span><span id="monitor-badge">Connecting…</span></summary><p id="monitor-status" role="status">Watching for new builds on the server.</p><div id="monitor-events" role="log" aria-live="polite" aria-label="Build notifications"></div></details>
+    <details class="tools-panel" aria-label="Build selection"><summary>Analyze a build</summary><div class="build-context">
+      <div class="context-title"><span>Build evidence</span><button id="up" hidden>↑ Parent</button><button id="refresh">Refresh</button></div>
       <label class="sr-only" for="jobs">Jenkins job or folder</label><select id="jobs"><option value="">Select job or folder</option></select>
       <div class="build-row"><label class="sr-only" for="builds">Failed build</label><select id="builds" disabled><option value="">Select failed build</option></select><button id="preview" disabled>Preview logs</button></div>
       <details id="preview-panel"><summary>Redacted log excerpt</summary><pre id="log-preview">Select a build to preview its logs.</pre><small id="log-info"></small></details>
       <label class="consent"><input id="consent" type="checkbox"> Send this build’s redacted logs to Google with my question</label>
-    </section>
+    </div></details>
     <div id="messages" role="log" aria-live="polite" aria-label="Conversation"></div>
-    <div class="suggestions"><button id="diagnose">Explain this failure</button><button id="general">Improve my Jenkinsfile</button></div>
+    <div class="suggestions"><button id="diagnose">Explain failure</button><button id="general">Jenkinsfile tips</button></div>
     <div id="status" role="status"></div>
-    <form id="composer"><label class="sr-only" for="question">Your message</label><textarea id="question" rows="2" maxlength="12000" placeholder="Ask about this build or anything DevOps…"></textarea><button id="send" type="submit" aria-label="Send message">↑</button></form>
-    <footer class="chat-foot"><span>Suggestions need human review.</span><button id="clear">Clear chat</button></footer>
+    <form id="composer"><label class="sr-only" for="question">Your message</label><textarea id="question" rows="2" maxlength="12000" placeholder="Ask JenkinsAI…"></textarea><button id="send" type="submit" aria-label="Send message">↑</button></form>
+    <footer class="chat-foot"><button id="clear">Clear chat</button></footer>
   </aside>
 </body>
 </html>

@@ -1,12 +1,24 @@
 "use strict";
 const el = id => document.getElementById(id);
-const embedded = new URLSearchParams(location.search).get("widget") === "1";
+const params = new URLSearchParams(location.search);
+const embedded = params.get("widget") === "1";
 if (embedded) document.body.classList.add("widget");
 let history = [], folder = "", selectedJob = "", jobEntries = [], previewed = false, busy = false, connected = false;
 let monitorTimer = null, monitorCursor = 0;
 let monitorInstance = null;
 let monitorGeneration = 0;
 const apiBase = new URL("./", location.href);
+const preferredTheme = window.matchMedia("(prefers-color-scheme: dark)");
+function applyTheme(theme) { document.documentElement.dataset.theme = theme === "dark" ? "dark" : "light"; }
+applyTheme(params.get("theme") || (preferredTheme.matches ? "dark" : "light"));
+preferredTheme.addEventListener("change", () => { if (!embedded) applyTheme(preferredTheme.matches ? "dark" : "light"); });
+window.addEventListener("message", event => {
+  if (embedded && event.source === window.parent && event.origin === location.origin && event.data?.type === "jenkinsai-theme") applyTheme(event.data.theme);
+});
+function botState(state) {
+  document.querySelector(".avatar").dataset.state = state;
+  if (embedded && window.parent !== window) window.parent.postMessage({type: "jenkinsai-widget-state", state}, apiBase.origin);
+}
 function openAssistant() {
   el("assistant").hidden = false; el("launcher").hidden = true;
   el("launcher").setAttribute("aria-expanded", "true"); el("question").focus();
@@ -61,7 +73,8 @@ async function watchBuilds(generation = monitorGeneration) {
       title.textContent = `${item.job} #${item.build} · ${item.kind === "analysis" ? "AI diagnosis" : item.kind === "analysis_error" ? "Analysis unavailable" : item.result}`;
       const content = document.createElement("p"); content.textContent = item.text;
       event.append(title, content); el("monitor-events").prepend(event);
-      if (item.kind === "analysis") { addMessage("model", `${item.job} #${item.build} · Automatic diagnosis\n\n${item.text}`); }
+      if (item.kind === "analysis") { addMessage("model", `${item.job} #${item.build} · Automatic diagnosis\n\n${item.text}`); botState("hello"); }
+      if (item.kind === "analysis_error") botState("error");
       if (embedded && window.parent !== window) {
         // Parent validates source and origin; only a notification label is shared.
         window.parent.postMessage({type: "jenkinsai-build-event", result: item.result, diagnosis: item.kind === "analysis"}, apiBase.origin);
@@ -95,6 +108,7 @@ function resetPreview() {
 }
 function setBusy(value) {
   busy = value;
+  botState(value ? "thinking" : "idle");
   for (const id of ["send", "clear", "diagnose", "general", "refresh", "up", "connect", "jobs", "consent"]) el(id).disabled = value;
   el("builds").disabled = value || !selectedJob;
   el("preview").disabled = value || !el("builds").value;
@@ -112,15 +126,16 @@ async function connect() {
   monitorGeneration += 1;
   connected = false;
   try {
-    status("Connecting…"); const health = await api("health");
-    el("mode").textContent = health.demo ? "OFFLINE DEMO · no model calls" : health.model + " · read-only";
+    botState("thinking"); status("Connecting…"); const health = await api("health");
+    el("mode").textContent = health.demo ? "Demo · read-only" : "Online · read-only";
     document.querySelector(".connection").hidden = health.demo;
     await loadJobs(); connected = true;
+    document.querySelector(".connection").open = false;
     el("connection-state").textContent = health.demo ? "Offline demo ready · sample data" : "Connected to Jenkins · live mode";
     el("connection-state").dataset.state = health.demo ? "demo" : "live";
-    status(health.demo ? "Demo fixture ready." : "Connected. Select a job or ask a question.");
+    status(""); botState("hello");
     watchBuilds();
-  } catch (error) { connected = false; el("connection-state").textContent = "Connection required · open assistant"; el("connection-state").dataset.state = "error"; status(error.message); }
+  } catch (error) { connected = false; el("connection-state").textContent = "Connection required · open assistant"; el("connection-state").dataset.state = "error"; status(error.message); botState("error"); }
 }
 el("connect").onclick = connect;
 el("refresh").onclick = async () => { if (busy) return; try { await loadJobs(); status("Jobs refreshed."); } catch (e) { status(e.message); } };
@@ -160,15 +175,17 @@ el("composer").onsubmit = async event => {
   const payload = { messages: candidate };
   if (el("consent").checked && previewed && selectedJob && el("builds").value) Object.assign(payload, { job: selectedJob, build: Number(el("builds").value), share_logs: true });
   addMessage("user", question); el("question").value = ""; setBusy(true); status("Analyzing…");
+  let failed = false;
   try {
     const data = await api("api/chat", { method: "POST", body: JSON.stringify(payload) });
     history = [...candidate, { role: "model", content: data.answer.slice(0, 12000) }]; addMessage("model", data.answer); status(data.demo ? "Offline demo response. Enable live mode for Gemma." : "Response from " + data.model + ". Review before acting.");
-  } catch (e) { status(e.message); el("question").value = question; } finally { setBusy(false); el("question").focus(); }
+  } catch (e) { failed = true; status(e.message); el("question").value = question; } finally { setBusy(false); botState(failed ? "error" : "hello"); el("question").focus(); }
 };
 el("question").onkeydown = event => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); el("composer").requestSubmit(); } };
 el("clear").onclick = () => { history = []; el("messages").replaceChildren(); addMessage("model", "Conversation cleared. Ask a DevOps question or select a failed build."); el("consent").checked = false; status(""); };
 el("close").onclick = () => { el("assistant").hidden = true; el("launcher").hidden = false; el("launcher").setAttribute("aria-expanded", "false"); el("launcher").focus(); };
 el("launcher").onclick = openAssistant;
 el("launcher").hidden = true; resetPreview();
-addMessage("model", "Hello. I watch pipeline updates in the monitor above and help explain failures. Select a build to inspect its evidence or ask a DevOps question.\n\nManual log sharing requires the checkbox. Automatic failure analysis follows the server setting shown in the monitor.");
+addMessage("model", "Hi! Ask me about Jenkins or a pipeline failure. I’ll show build alerts in Pipelines; open Analyze a build when you want to share log evidence.");
+botState("hello");
 connect();
