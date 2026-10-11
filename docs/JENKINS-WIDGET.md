@@ -1,5 +1,7 @@
 # Bottom-right Jenkins widget
 
+The assistant homepage now includes **Add the bot to Jenkins**. Enter the browser-visible assistant URL (including a reverse-proxy prefix if used), then drag **Open JenkinsAI** to your bookmarks bar. Alternatively copy the generated URL into a bookmark. **Preview widget** opens the compact chat directly. Open Jenkins and click the saved bookmark to display the floating bot. Never include credentials in the assistant URL.
+
 For the fastest demo, run the assistant privately via SSH forwarding and use the following bookmarklet on your Jenkins dashboard. Create a browser bookmark, edit its URL to this single line, then click it while Jenkins is open at `http://127.0.0.1:8080`:
 
 ```javascript

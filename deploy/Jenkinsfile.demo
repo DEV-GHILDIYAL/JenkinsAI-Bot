@@ -1,0 +1,48 @@
+// Standalone hackathon fixture; no repository checkout or real deployment.
+pipeline {
+    agent any
+    options {
+        skipDefaultCheckout(true)
+        disableConcurrentBuilds()
+        timeout(time: 5, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+    parameters {
+        booleanParam(name: 'FAIL_TEST', defaultValue: true,
+            description: 'Controlled demo failure. Uncheck to run the passing test.')
+    }
+    stages {
+        stage('Prepare') {
+            steps {
+                echo 'JenkinsAI demo fixture: no external dependencies or credentials.'
+            }
+        }
+        stage('Build') {
+            steps {
+                echo 'Preparing arithmetic test fixture; no application compilation required.'
+            }
+        }
+        stage('Test') {
+            steps {
+                script {
+                    def expected = 4
+                    def actual = params.FAIL_TEST ? 5 : (2 + 2)
+                    echo "TEST: addition_should_return_four | expected=${expected} actual=${actual}"
+                    if (actual != expected) {
+                        error("AssertionError: addition_should_return_four expected ${expected} but got ${actual}. Controlled fixture failure: FAIL_TEST=true. Set FAIL_TEST=false and rebuild to verify the passing case.")
+                    }
+                    echo 'PASS: addition_should_return_four'
+                }
+            }
+        }
+        stage('Demo Deploy') {
+            steps {
+                echo 'SIMULATED DEPLOY: tests passed. No application or infrastructure was changed.'
+            }
+        }
+    }
+    post {
+        success { echo 'DEMO RESULT: SUCCESS - passing test verified.' }
+        failure { echo 'DEMO RESULT: FAILURE - inspect the Test stage and AssertionError evidence.' }
+    }
+}

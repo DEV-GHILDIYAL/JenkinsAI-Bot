@@ -4,6 +4,38 @@ const embedded = new URLSearchParams(location.search).get("widget") === "1";
 if (embedded) document.body.classList.add("widget");
 let history = [], folder = "", selectedJob = "", jobEntries = [], previewed = false, busy = false, connected = false;
 const apiBase = new URL("./", location.href);
+function openAssistant() {
+  el("assistant").hidden = false; el("launcher").hidden = true;
+  el("launcher").setAttribute("aria-expanded", "true"); el("question").focus();
+}
+function configureWidget() {
+  try {
+    const url = new URL(el("assistant-url").value);
+    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash) throw new Error("Use an HTTP(S) assistant URL without credentials, query, or fragment.");
+    if (!url.pathname.endsWith("/")) url.pathname += "/";
+    url.search = "?widget=1";
+    const code = `(()=>{if(document.getElementById('jenkinsai-widget-frame'))return;const f=document.createElement('iframe');f.id='jenkinsai-widget-frame';f.title='JenkinsAI assistant';f.src=${JSON.stringify(url.href)};f.style.cssText='position:fixed;right:16px;bottom:76px;width:min(415px,calc(100vw - 32px));height:min(760px,calc(100vh - 100px));border:0;border-radius:12px;z-index:2147483647';const b=document.createElement('button');b.textContent='Close JenkinsAI';b.setAttribute('aria-expanded','true');b.style.cssText='position:fixed;right:16px;bottom:20px;padding:14px 20px;border:0;border-radius:24px;background:#9fe3cc;color:#101722;font:600 14px system-ui;cursor:pointer;z-index:2147483647';b.onclick=()=>{f.hidden=!f.hidden;b.textContent=f.hidden?'Open JenkinsAI':'Close JenkinsAI';b.setAttribute('aria-expanded',String(!f.hidden))};document.body.append(f,b)})();`;
+    el("widget-bookmark").href = "javascript:" + code;
+    el("widget-preview").href = url.href;
+    el("copy-widget").disabled = false;
+    el("setup-status").textContent = "Drag Open JenkinsAI to your bookmarks bar. The URL contains no tokens or API keys.";
+    return el("widget-bookmark").getAttribute("href");
+  } catch (error) {
+    el("widget-bookmark").removeAttribute("href"); el("widget-preview").removeAttribute("href");
+    el("copy-widget").disabled = true; el("setup-status").textContent = error.message;
+    return null;
+  }
+}
+el("assistant-url").value = apiBase.href;
+el("assistant-url").oninput = configureWidget;
+el("widget-bookmark").onclick = event => { event.preventDefault(); el("setup-status").textContent = "Drag this link to your bookmarks bar, or copy its URL into a new bookmark. Click that bookmark while Jenkins is open."; };
+el("copy-widget").onclick = async () => {
+  const bookmark = configureWidget(); if (!bookmark) return;
+  try { await navigator.clipboard.writeText(bookmark); el("setup-status").textContent = "Copied. Paste into a bookmark's URL, then click the bookmark on Jenkins."; }
+  catch { el("setup-status").textContent = "Clipboard unavailable here. Drag Open JenkinsAI to your bookmarks bar instead."; }
+};
+el("open-assistant").onclick = openAssistant;
+configureWidget();
 function status(text) { el("status").textContent = text; }
 async function api(path, options = {}) {
   const headers = { ...options.headers };
@@ -40,12 +72,16 @@ async function loadJobs() {
   el("builds").replaceChildren(); option(el("builds"), "", "Select failed build"); el("builds").disabled = true; el("preview").disabled = true; resetPreview();
 }
 async function connect() {
+  connected = false;
   try {
     status("Connecting…"); const health = await api("health");
     el("mode").textContent = health.demo ? "OFFLINE DEMO · no model calls" : health.model + " · read-only";
     document.querySelector(".connection").hidden = health.demo;
-    await loadJobs(); connected = true; status(health.demo ? "Demo fixture ready." : "Connected. Select a job or ask a question.");
-  } catch (error) { connected = false; status(error.message); }
+    await loadJobs(); connected = true;
+    el("connection-state").textContent = health.demo ? "Offline demo ready · sample data" : "Connected to Jenkins · live mode";
+    el("connection-state").dataset.state = health.demo ? "demo" : "live";
+    status(health.demo ? "Demo fixture ready." : "Connected. Select a job or ask a question.");
+  } catch (error) { connected = false; el("connection-state").textContent = "Connection required · open assistant"; el("connection-state").dataset.state = "error"; status(error.message); }
 }
 el("connect").onclick = connect;
 el("refresh").onclick = async () => { if (busy) return; try { await loadJobs(); status("Jobs refreshed."); } catch (e) { status(e.message); } };
@@ -93,7 +129,7 @@ el("composer").onsubmit = async event => {
 el("question").onkeydown = event => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); el("composer").requestSubmit(); } };
 el("clear").onclick = () => { history = []; el("messages").replaceChildren(); addMessage("model", "Conversation cleared. Ask a DevOps question or select a failed build."); el("consent").checked = false; status(""); };
 el("close").onclick = () => { el("assistant").hidden = true; el("launcher").hidden = false; el("launcher").setAttribute("aria-expanded", "false"); el("launcher").focus(); };
-el("launcher").onclick = () => { el("assistant").hidden = false; el("launcher").hidden = true; el("launcher").setAttribute("aria-expanded", "true"); el("question").focus(); };
+el("launcher").onclick = openAssistant;
 el("launcher").hidden = true; resetPreview();
 addMessage("model", "Hello. I can help you understand a failed build or answer a DevOps question. Select a build above to inspect its evidence.\n\nLogs are only sent to Google when you enable sharing and send a question.");
 connect();
