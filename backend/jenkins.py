@@ -72,13 +72,16 @@ class Jenkins:
         return [{"name": j["name"], "path": f"{folder}/{j['name']}".lstrip("/"), "folder": "Folder" in j.get("_class", "") or "MultiBranch" in j.get("_class", "") or "OrganizationFolder" in j.get("_class", "")} for j in result.get("jobs", [])]
 
     async def builds(self, job):
+        return [b for b in await self.recent_builds(job) if b.get("result") in {"FAILURE", "UNSTABLE", "ABORTED"}]
+
+    async def recent_builds(self, job):
         path = job_path(job)
         if self.s.demo:
             if job != "demo-api":
                 raise HTTPException(404, "Demo job not found")
             return [{"number": 42, "result": "FAILURE", "timestamp": 0, "duration": 16000, "building": False}]
         result = await self.json(path, "builds[number,result,timestamp,duration,building]{0,30}")
-        return [b for b in result.get("builds", []) if b.get("result") in {"FAILURE", "UNSTABLE", "ABORTED"}]
+        return result.get("builds", [])
 
     async def context(self, job, build):
         path = f"{job_path(job)}/{build}"

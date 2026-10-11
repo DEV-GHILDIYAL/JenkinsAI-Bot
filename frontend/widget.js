@@ -16,6 +16,14 @@
   frame.src = new URL("?widget=1", base).href; frame.hidden = true;
   frame.style.cssText = "position:fixed;right:24px;bottom:80px;z-index:2147483647;width:min(415px,calc(100vw - 32px));height:min(760px,calc(100dvh - 110px));border:0;border-radius:12px";
   button.setAttribute("aria-expanded", "false");
-  button.onclick = () => { frame.hidden = !frame.hidden; button.textContent = frame.hidden ? "Ask JenkinsAI" : "Close assistant"; button.setAttribute("aria-expanded", String(!frame.hidden)); };
+  let unread = 0;
+  window.addEventListener("message", event => {
+    if (event.source !== frame.contentWindow || event.origin !== base.origin || event.data?.type !== "jenkinsai-build-event") return;
+    if (frame.hidden) {
+      unread += 1;
+      button.textContent = `JenkinsAI · ${unread} updates`;
+    }
+  });
+  button.onclick = () => { frame.hidden = !frame.hidden; if (!frame.hidden) unread = 0; button.textContent = frame.hidden ? "Ask JenkinsAI" : "Close assistant"; button.setAttribute("aria-expanded", String(!frame.hidden)); };
   document.body.append(frame, button);
 })();

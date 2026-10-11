@@ -1,5 +1,7 @@
 # Bottom-right Jenkins widget
 
+For a widget that stays available after every Jenkins page reload and server-side background build monitoring, follow [persistent monitoring setup](MONITORING.md). The private gateway serves Jenkins at port 8090 and loads the launcher on every page. The bookmarklet below is an optional temporary fallback.
+
 The assistant homepage now includes **Add the bot to Jenkins**. Enter the browser-visible assistant URL (including a reverse-proxy prefix if used), then drag **Open JenkinsAI** to your bookmarks bar. Alternatively copy the generated URL into a bookmark. **Preview widget** opens the compact chat directly. Open Jenkins and click the saved bookmark to display the floating bot. Never include credentials in the assistant URL.
 
 For the fastest demo, run the assistant privately via SSH forwarding and use the following bookmarklet on your Jenkins dashboard. Create a browser bookmark, edit its URL to this single line, then click it while Jenkins is open at `http://127.0.0.1:8080`:
@@ -14,4 +16,4 @@ The assistant allows framing only from itself and the exact `JENKINS_FRAME_ORIGI
 
 For an administrator-approved persistent dashboard customization, `frontend/widget.js` creates the same bottom-right launcher and iframe. Load it with an external `<script src="https://YOUR_ASSISTANT/static/widget.js"></script>` only through an approved Jenkins customization mechanism and CSP. A Jenkins Java plugin is outside this MVP; this file does not install one.
 
-The iframe isolates credentials/UI from Jenkins page scripts. The backend still uses the configured reader identity rather than the current Jenkins user's permissions. Sharing an assistant token grants access to all jobs visible to that reader.
+A cross-origin iframe isolates assistant UI from Jenkins page scripts. The supplied same-origin reverse-proxy gateway does not provide that isolation: trusted Jenkins page scripts can access the assistant frame. Backend Jenkins/Google credentials still remain on the server. The backend uses the configured reader identity rather than the current Jenkins user's permissions. Sharing an assistant token grants access to all jobs visible to that reader.

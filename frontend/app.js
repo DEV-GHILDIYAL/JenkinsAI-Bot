@@ -3,6 +3,9 @@ const el = id => document.getElementById(id);
 const embedded = new URLSearchParams(location.search).get("widget") === "1";
 if (embedded) document.body.classList.add("widget");
 let history = [], folder = "", selectedJob = "", jobEntries = [], previewed = false, busy = false, connected = false;
+let monitorTimer = null, monitorCursor = 0;
+let monitorInstance = null;
+let monitorGeneration = 0;
 const apiBase = new URL("./", location.href);
 function openAssistant() {
   el("assistant").hidden = false; el("launcher").hidden = true;
@@ -18,7 +21,7 @@ function configureWidget() {
     el("widget-bookmark").href = "javascript:" + code;
     el("widget-preview").href = url.href;
     el("copy-widget").disabled = false;
-    el("setup-status").textContent = "Drag Open JenkinsAI to your bookmarks bar. The URL contains no tokens or API keys.";
+    el("setup-status").textContent = "Drag Open JenkinsAI to your bookmarks bar for a temporary launcher. The URL contains no tokens or API keys.";
     return el("widget-bookmark").getAttribute("href");
   } catch (error) {
     el("widget-bookmark").removeAttribute("href"); el("widget-preview").removeAttribute("href");
@@ -37,6 +40,38 @@ el("copy-widget").onclick = async () => {
 el("open-assistant").onclick = openAssistant;
 configureWidget();
 function status(text) { el("status").textContent = text; }
+async function watchBuilds(generation = monitorGeneration) {
+  if (!connected || generation !== monitorGeneration) return;
+  try {
+    const data = await api("api/monitor?after=" + monitorCursor);
+    if (generation !== monitorGeneration) return;
+    // Server restart resets its bounded event cursor.
+    if (monitorInstance && monitorInstance !== data.instance) {
+      monitorCursor = 0; monitorInstance = data.instance;
+      el("monitor-events").replaceChildren();
+      return;
+    }
+    monitorInstance = data.instance;
+    el("monitor-badge").textContent = !data.enabled ? "OFF" : data.error ? "RETRYING" : data.last_poll ? "WATCHING" : "STARTING";
+    el("monitor-status").textContent = data.error || (!data.enabled ? "Server monitoring is disabled." : `${data.demo ? "Sample data · " : ""}${data.job_count} jobs · checks every ${data.interval}s. ${data.auto_analyze ? "New failures are sent to Gemma automatically." : "Status alerts enabled. Automatic AI analysis is off."}${data.truncated ? " Scan limited to 100 job/folder entries." : ""}`);
+    for (const item of data.events) {
+      const event = document.createElement("details"); event.className = "monitor-event";
+      event.dataset.result = item.result;
+      const title = document.createElement("summary");
+      title.textContent = `${item.job} #${item.build} · ${item.kind === "analysis" ? "AI diagnosis" : item.kind === "analysis_error" ? "Analysis unavailable" : item.result}`;
+      const content = document.createElement("p"); content.textContent = item.text;
+      event.append(title, content); el("monitor-events").prepend(event);
+      if (item.kind === "analysis") { addMessage("model", `${item.job} #${item.build} · Automatic diagnosis\n\n${item.text}`); }
+      if (embedded && window.parent !== window) {
+        // Parent validates source and origin; only a notification label is shared.
+        window.parent.postMessage({type: "jenkinsai-build-event", result: item.result, diagnosis: item.kind === "analysis"}, apiBase.origin);
+      }
+    }
+    while (el("monitor-events").children.length > 30) el("monitor-events").lastChild.remove();
+    monitorCursor = data.cursor;
+  } catch (error) { el("monitor-badge").textContent = "RETRYING"; el("monitor-status").textContent = error.message; }
+  finally { if (connected && generation === monitorGeneration) monitorTimer = setTimeout(() => watchBuilds(generation), 5000); }
+}
 async function api(path, options = {}) {
   const headers = { ...options.headers };
   if (el("token").value) headers.Authorization = "Bearer " + el("token").value;
@@ -51,6 +86,7 @@ function addMessage(role, text) {
   const author = document.createElement("span"); author.className = "author"; author.textContent = role === "user" ? "YOU" : "JENKINSAI";
   const body = document.createElement("p"); body.textContent = text;
   node.append(author, body); el("messages").append(node); el("messages").scrollTop = el("messages").scrollHeight;
+  while (el("messages").children.length > 80) el("messages").firstChild.remove();
 }
 function option(select, value, text) { const o = document.createElement("option"); o.value = value; o.textContent = text; select.append(o); }
 function resetPreview() {
@@ -72,6 +108,8 @@ async function loadJobs() {
   el("builds").replaceChildren(); option(el("builds"), "", "Select failed build"); el("builds").disabled = true; el("preview").disabled = true; resetPreview();
 }
 async function connect() {
+  clearTimeout(monitorTimer);
+  monitorGeneration += 1;
   connected = false;
   try {
     status("Connecting…"); const health = await api("health");
@@ -81,6 +119,7 @@ async function connect() {
     el("connection-state").textContent = health.demo ? "Offline demo ready · sample data" : "Connected to Jenkins · live mode";
     el("connection-state").dataset.state = health.demo ? "demo" : "live";
     status(health.demo ? "Demo fixture ready." : "Connected. Select a job or ask a question.");
+    watchBuilds();
   } catch (error) { connected = false; el("connection-state").textContent = "Connection required · open assistant"; el("connection-state").dataset.state = "error"; status(error.message); }
 }
 el("connect").onclick = connect;
@@ -131,5 +170,5 @@ el("clear").onclick = () => { history = []; el("messages").replaceChildren(); ad
 el("close").onclick = () => { el("assistant").hidden = true; el("launcher").hidden = false; el("launcher").setAttribute("aria-expanded", "false"); el("launcher").focus(); };
 el("launcher").onclick = openAssistant;
 el("launcher").hidden = true; resetPreview();
-addMessage("model", "Hello. I can help you understand a failed build or answer a DevOps question. Select a build above to inspect its evidence.\n\nLogs are only sent to Google when you enable sharing and send a question.");
+addMessage("model", "Hello. I watch pipeline updates in the monitor above and help explain failures. Select a build to inspect its evidence or ask a DevOps question.\n\nManual log sharing requires the checkbox. Automatic failure analysis follows the server setting shown in the monitor.");
 connect();

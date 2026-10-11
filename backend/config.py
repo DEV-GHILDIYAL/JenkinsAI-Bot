@@ -15,6 +15,9 @@ class Settings:
     assistant_token: str = ""
     frame_origin: str = "http://127.0.0.1:8080"
     redact_values: str = ""
+    monitor_enabled: bool = True
+    monitor_interval: int = 15
+    auto_analyze: bool = False
 
     @classmethod
     def from_env(cls):
@@ -28,8 +31,13 @@ class Settings:
             assistant_token=os.getenv("ASSISTANT_TOKEN", ""),
             frame_origin=os.getenv("JENKINS_FRAME_ORIGIN", "http://127.0.0.1:8080"),
             redact_values=os.getenv("REDACT_VALUES", ""),
+            monitor_enabled=os.getenv("MONITOR_ENABLED", "true").lower() == "true",
+            monitor_interval=int(os.getenv("MONITOR_INTERVAL_SECONDS", "15")),
+            auto_analyze=os.getenv("AUTO_ANALYZE_FAILURES", "false").lower() == "true",
         )
         url = urlsplit(settings.jenkins_url)
+        if not 5 <= settings.monitor_interval <= 300:
+            raise ValueError("MONITOR_INTERVAL_SECONDS must be between 5 and 300")
         if url.scheme not in {"http", "https"} or not url.hostname or url.username or url.password or url.query or url.fragment:
             raise ValueError("JENKINS_URL must be a fixed HTTP(S) base URL without credentials, query, or fragment")
         if not re.fullmatch(r"gemma-4-[a-z0-9-]+", settings.model):

@@ -2,6 +2,7 @@ import asyncio
 import secrets
 import time
 from collections import deque
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
 
@@ -13,6 +14,7 @@ from pydantic import BaseModel, Field, model_validator
 from .config import Settings
 from .jenkins import Jenkins
 from .model import Gemma
+from .monitor import BuildMonitor
 
 
 class Message(BaseModel):
@@ -45,11 +47,38 @@ def create_app(settings=None, jenkins=None, model=None):
     s = settings or Settings.from_env()
     j = jenkins or Jenkins(s)
     ai = model or Gemma(s)
-    app = FastAPI(title="JenkinsAI Bot", docs_url=None, redoc_url=None, openapi_url=None)
+    @asynccontextmanager
+    async def lifespan(app):
+        await monitor.start()
+        try:
+            yield
+        finally:
+            await monitor.stop()
+
+    app = FastAPI(title="JenkinsAI Bot", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     frontend = Path(__file__).resolve().parent.parent / "frontend"
     app.mount("/static", StaticFiles(directory=frontend), name="static")
     calls = deque()
     active = asyncio.Semaphore(2)
+
+    async def generate(messages, job=None, build=None):
+        now = time.monotonic()
+        while calls and calls[0] < now - 60:
+            calls.popleft()
+        if len(calls) >= 10 or active.locked():
+            raise HTTPException(429, "Analysis busy or shared rate limit reached; retry in a minute")
+        calls.append(now)
+        async with active:
+            ctx = await j.context(job, build) if job is not None else None
+            answer = await ai.chat(messages, ctx)
+        return answer, ctx
+
+    async def analyze_failure(job, build):
+        answer, _ = await generate([Message(role="user", content="Automatically analyze this completed failed build. Cite log evidence, explain the likely root cause, and suggest a fix and verification steps.")], job, build)
+        return answer
+
+    monitor = BuildMonitor(s, j, analyze_failure)
+    app.state.monitor = monitor
 
     @app.middleware("http")
     async def limits_and_headers(request: Request, call_next):
@@ -95,19 +124,13 @@ def create_app(settings=None, jenkins=None, model=None):
     async def context(job: str = Query(max_length=500), build: int = Query(ge=1)):
         return await j.context(job, build)
 
+    @app.get("/api/monitor", dependencies=[Depends(authorize)])
+    async def monitoring(after: int = Query(default=0, ge=0)):
+        return monitor.snapshot(after)
+
     @app.post("/api/chat", dependencies=[Depends(authorize)])
     async def chat(body: ChatRequest):
-        now = time.monotonic()
-        while calls and calls[0] < now - 60:
-            calls.popleft()
-        if len(calls) >= 10:
-            raise HTTPException(429, "Shared demo access limit reached; retry in a minute")
-        if active.locked():
-            raise HTTPException(429, "Two analyses are already running; retry shortly")
-        calls.append(now)
-        async with active:
-            ctx = await j.context(body.job, body.build) if body.job is not None else None
-            answer = await ai.chat(body.messages, ctx)
+        answer, ctx = await generate(body.messages, body.job, body.build)
         return {"answer": answer, "demo": s.demo, "model": None if s.demo else s.model, "context": {k: v for k, v in ctx.items() if k != "log"} if ctx else None}
 
     return app

@@ -15,11 +15,11 @@
       <div class="hero-actions"><button id="open-assistant">Open assistant ↗</button><span id="connection-state" role="status">Checking service…</span></div>
       <section class="setup-card" aria-labelledby="setup-title">
         <h2 id="setup-title">Add the bot to Jenkins</h2>
-        <p>Keep this service running. Drag the launcher below to your bookmarks bar, open Jenkins, then click the bookmark to show the chat widget.</p>
+        <p>The permanent launcher appears when you open Jenkins through the configured widget gateway. For a temporary launcher on your current Jenkins page, save the bookmark below.</p>
         <label for="assistant-url">Browser-visible assistant URL</label>
         <input id="assistant-url" type="url" placeholder="http://127.0.0.1:8000/" spellcheck="false">
         <div class="setup-actions"><a id="widget-bookmark">Open JenkinsAI</a><button id="copy-widget" type="button">Copy bookmark URL</button><a id="widget-preview" target="_blank" rel="noopener noreferrer">Preview widget ↗</a></div>
-        <small id="setup-status" role="status">The bookmark opens this chat inside your current Jenkins page. Reloading Jenkins removes it.</small>
+        <small id="setup-status" role="status">The bookmark is temporary. The installed widget gateway keeps the launcher available after reload.</small>
         <details><summary>Using SSH forwarding on EC2?</summary><p>Open both forwarded services in your browser: assistant on port 8000 and Jenkins on port 8080. Set JENKINS_FRAME_ORIGIN to the Jenkins origin you use. If Jenkins blocks embedding, use this standalone chat.</p></details>
       </section>
       <div class="workflow"><span><b>01</b> Select a build</span><span><b>02</b> Inspect the evidence</span><span><b>03</b> Ask Gemma</span></div>
@@ -34,6 +34,11 @@ Review the excerpt before enabling log sharing.</pre></section>
   <aside id="assistant" aria-label="JenkinsAI assistant">
     <header class="chat-head"><div class="avatar">J</div><div><strong>JenkinsAI</strong><small id="mode">Connecting…</small></div><button id="close" aria-label="Close assistant">×</button></header>
     <div class="connection"><label for="token">Assistant access token</label><div class="token-row"><input id="token" type="password" autocomplete="off" placeholder="Required in live mode"><button id="connect">Connect</button></div></div>
+    <section class="monitor-panel" aria-label="Pipeline monitor">
+      <div class="context-title">PIPELINE MONITOR <span id="monitor-badge">Connecting…</span></div>
+      <p id="monitor-status" role="status">Watching for new builds on the server.</p>
+      <div id="monitor-events" role="log" aria-live="polite" aria-label="Build notifications"></div>
+    </section>
     <section class="build-context" aria-label="Build selection">
       <div class="context-title">BUILD CONTEXT <button id="up" hidden>↑ Parent</button><button id="refresh">Refresh</button></div>
       <label class="sr-only" for="jobs">Jenkins job or folder</label><select id="jobs"><option value="">Select job or folder</option></select>

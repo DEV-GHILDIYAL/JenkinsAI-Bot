@@ -9,6 +9,7 @@
 - Automatic console-log retrieval, redacted previews, line-numbered error neighborhoods, and explicit consent before model transmission.
 - Evidence-led root-cause analysis, verification steps, suggested fixes, and Jenkinsfile/Groovy recommendations.
 - Bottom-right web chat, plus an iframe widget for the Jenkins dashboard.
+- Server-side build monitoring, status notifications, and opt-in automatic Gemma diagnoses for new failed builds. See [persistent widget and monitoring](docs/MONITORING.md).
 - A separate Gemma terminal coding assistant that previews source files and proposes changes. It never runs commands or writes files.
 - A labeled offline fixture for rehearsing without credentials, an MIT license, tests, and GitHub Actions.
 
@@ -56,7 +57,7 @@ Generate the assistant access token with `python3 -c 'import secrets; print(secr
 
 See [EC2 setup](docs/DEPLOYMENT.md) and [Jenkins widget setup](docs/JENKINS-WIDGET.md). The installer creates a separate unprivileged assistant service on **127.0.0.1:8000** and does not change Jenkins. Keep port 8000 private and use SSH forwarding for a hackathon demo.
 
-The provided iframe/bookmarklet integration is a browser-session MVP, not a packaged Jenkins Java plugin. A persistent installation needs an approved dashboard customization/plugin or a reverse proxy integration respecting Jenkins CSP. The standalone assistant works without Jenkins UI customization.
+The bookmarklet is a browser-session fallback. The supplied private Nginx gateway provides a persistent bottom-right widget on every Jenkins page through port 8090, respecting Jenkins CSP. See [setup](docs/MONITORING.md). This is not a packaged Jenkins Java plugin.
 
 ## Terminal coding assistant using only Gemma
 
@@ -72,7 +73,7 @@ Ask coding questions directly. `/file backend/jenkins.py` previews a redacted fi
 
 Browser widget → authenticated FastAPI → fixed Jenkins base (GET only) → redaction and bounded evidence → hosted Gemma 4 → plain-text response.
 
-Jenkins and Google credentials exist on the backend only. The model has no tools, shell, deployment, or write endpoints. Log content is explicitly treated as untrusted input. User consent gates transmission of build context; chat messages and prior turns also go to Google in live mode. No database or server chat persistence is used. Conversation is held in browser memory; clearing it removes client history, not provider-held data.
+Jenkins and Google credentials exist on the backend only. The model has no tools, shell, deployment, or write endpoints. Log content is explicitly treated as untrusted input. Manual analysis requires per-build consent. Automatic monitoring sends redacted failed-build context only when the administrator explicitly enables `AUTO_ANALYZE_FAILURES=true`; that mode has no per-build preview. Chat messages and prior turns also go to Google in live mode. The monitor retains up to 100 events/diagnoses in server memory, lost on restart; no database or server chat persistence is used. Conversation is held in browser memory; clearing it removes client history, not monitor events or provider-held data.
 
 The assistant access token is a **shared hackathon gate**: every holder can read every job accessible to the Jenkins service account. It does not reuse Jenkins SSO or enforce per-user Jenkins RBAC. Limit the reader's visible jobs and restrict access to a trusted demo audience. Use proper user authentication, per-user authorization, distributed limits, and audit controls before wider deployment.
 
