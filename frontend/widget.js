@@ -36,10 +36,14 @@
     /* Full Chat Dialog */
     #jenkinsai-inspector .ai-chat-panel{width:min(450px,calc(100vw - 36px));height:calc(100vh - 110px);max-height:840px;min-height:500px;display:flex;flex-direction:column;position:absolute;bottom:70px;right:0;background:var(--bg);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;animation:ai-slideup .22s cubic-bezier(0.16,1,0.3,1)}
     #jenkinsai-inspector [hidden]{display:none!important}
-    #jenkinsai-inspector .ai-panel-head{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
-    #jenkinsai-inspector .ai-panel-titles{flex:1;display:flex;align-items:center;gap:8px}
-    #jenkinsai-inspector .ai-panel-titles strong{font-size:13.5px;font-weight:600}
-    #jenkinsai-inspector .ai-panel-titles span{font-size:11px;color:var(--muted)}
+    #jenkinsai-inspector .ai-panel-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:8px}
+    #jenkinsai-inspector .ai-panel-titles{display:flex;flex-direction:column;gap:2px;overflow:hidden}
+    #jenkinsai-inspector .ai-user-greeting{font-size:11px;font-weight:700;color:var(--accent);letter-spacing:0.3px;display:flex;align-items:center;gap:4px}
+    #jenkinsai-inspector .ai-panel-titles strong{font-size:13px;font-weight:600;white-space:nowrap}
+    #jenkinsai-inspector .ai-panel-sub{font-size:10.5px;color:var(--muted)}
+    #jenkinsai-inspector .ai-panel-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+    #jenkinsai-inspector .ai-lang-select{border:1px solid var(--border);background:var(--bg);color:var(--fg);font-size:11px;font-weight:600;border-radius:6px;padding:3px 6px;cursor:pointer;outline:none;transition:border-color .15s ease}
+    #jenkinsai-inspector .ai-lang-select:focus,#jenkinsai-inspector .ai-lang-select:hover{border-color:var(--accent)}
     #jenkinsai-inspector .ai-panel-close{border:0;background:transparent;color:var(--muted);font-size:18px;line-height:1;padding:4px 8px;border-radius:6px;cursor:pointer}
     #jenkinsai-inspector .ai-panel-close:hover{background:var(--accent-soft);color:var(--fg)}
     
@@ -76,6 +80,15 @@
     @media(prefers-reduced-motion:reduce){#jenkinsai-inspector *,#jenkinsai-inspector *:before{animation:none!important}}
   `;
   document.head.append(style);
+
+  // Detect currently signed-in Jenkins user from DOM or attributes
+  function getJenkinsUser() {
+    const userLink = document.querySelector(".login a[href*='/user/'], .page-header a[href*='/user/'], .jenkins-header a[href*='/user/'], a.model-link[href*='/user/'], .login strong");
+    const raw = userLink ? userLink.textContent.trim() : "";
+    return (raw && raw !== "log in" && raw !== "Sign in") ? raw : "Engineer";
+  }
+  const jenkinsUser = getJenkinsUser();
+
   const root = document.createElement("div");
   root.id = "jenkinsai-inspector";
   root.dataset.verdict = "loading";
@@ -94,10 +107,16 @@
     <section class="ai-chat-panel" hidden role="dialog" aria-label="Jenkins AI Chat">
       <div class="ai-panel-head">
         <div class="ai-panel-titles">
-          <strong>Jenkins AI Assistant</strong>
-          <span class="ai-panel-sub">Build #${build}</span>
+          <span class="ai-user-greeting">👋 Hi, ${jenkinsUser}</span>
+          <strong>Jenkins AI Assistant <span class="ai-panel-sub">#${build}</span></strong>
         </div>
-        <button class="ai-panel-close" type="button" aria-label="Close chat">×</button>
+        <div class="ai-panel-actions">
+          <select class="ai-lang-select" aria-label="Select response language" title="Change Language">
+            <option value="Hinglish" selected>🇮🇳 Hinglish</option>
+            <option value="English">🌐 English</option>
+          </select>
+          <button class="ai-panel-close" type="button" aria-label="Close chat">×</button>
+        </div>
       </div>
       <div class="ai-context-banner">
         <span>Build Status: <strong class="ai-context-status">Inspecting...</strong></span>
@@ -133,6 +152,7 @@
   const toastClose = root.querySelector(".ai-toast-close");
   const chatPanel = root.querySelector(".ai-chat-panel");
   const panelClose = root.querySelector(".ai-panel-close");
+  const langSelect = root.querySelector(".ai-lang-select");
   const contextStatus = root.querySelector(".ai-context-status");
   const launcher = root.querySelector(".ai-launcher");
   const mouth = root.querySelector(".ai-mouth");
@@ -145,6 +165,19 @@
   let chatBuild = build;
   let chatting = false;
   let cachedDiagnosis = null;
+  let selectedLang = "Hinglish";
+
+  if (langSelect) {
+    langSelect.onchange = () => {
+      selectedLang = langSelect.value;
+      if (thread && thread.children.length) {
+        addChat("model", selectedLang === "Hinglish" 
+          ? `Bhasha ab Hinglish set ho gayi hai. Koi bhi sawaal pooch sakte hain!` 
+          : `Language switched to English. Feel free to ask any build questions!`
+        );
+      }
+    };
+  }
 
   function syncTheme() {
     const marker = `${document.documentElement.dataset.theme || ""} ${document.documentElement.className} ${document.body.className}`.toLowerCase();
@@ -206,7 +239,10 @@
     }
     const text = question.value.trim();
     if (!text || chatting) return false;
-    const candidate = [...history.slice(-16), {role: "user", content: text}];
+    const userPrompt = selectedLang === "English"
+      ? `${text} (Please reply strictly in English)`
+      : `${text} (Hinglish mein reply karein)`;
+    const candidate = [...history.slice(-16), {role: "user", content: userPrompt}];
     const previousJob = chatJob;
     const previousBuild = chatBuild;
     addChat("user", text);
@@ -218,7 +254,9 @@
       const response = await fetch(chatApi, {method: "POST", credentials: "same-origin", headers: {"Content-Type": "application/json"}, body: JSON.stringify({messages: candidate, job: chatJob, build: chatBuild, share_logs: true})});
       if (!response.ok) throw new Error(response.status === 429 ? "Analysis busy. Try again shortly." : await errorMessage(response, "Could not answer"));
       const data = await response.json();
-      const answer = data.answer || "I only answer questions about this Jenkins build.";
+      const answer = data.answer || (selectedLang === "Hinglish" 
+        ? "Main sirf is Jenkins build se jude sawaalon ka jawab deta hoon." 
+        : "I only answer questions about this Jenkins build.");
       if (!data.refused) {
         const switchedBuild = data.job && data.build && (data.job !== previousJob || data.build !== previousBuild);
         const conversation = switchedBuild ? [candidate[candidate.length - 1]] : candidate;
