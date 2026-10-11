@@ -365,9 +365,9 @@
       row.className = "ai-diagnosis-row";
       const title = document.createElement("strong");
       title.textContent = label;
-      const content = document.createElement("span");
-      content.textContent = value;
-      row.append(title, content);
+      const detail = document.createElement("span");
+      detail.textContent = value;
+      row.append(title, detail);
       content.append(row);
     }
     if (data.partial_log) {
