@@ -6,9 +6,11 @@
 
 - A compact popup appears when a signed-in user opens a Jenkins build's **Console Output** through the private gateway.
 - Gemma checks the opened build's redacted console excerpt and returns a verdict, one evidence line, and one next step.
-- After the diagnosis, **Ask about this build** opens an optional chat. The bot answers only questions about that Jenkins build's console, result, and next step; other topics are refused before a model call.
+- After the diagnosis, **Ask about this build** opens an optional chat. The bot answers Jenkins build questions about console output, results, and next steps; other topics are refused before a model call.
+- The popup chat can target another job/build when named explicitly (for example, `Check pipeline testing build #12`). Submitting shares that build's redacted excerpt with Gemma.
 - Jenkins `SUCCESS` is checked for unresolved log errors too; the popup can flag a **Hidden issue**.
 - Running builds are rechecked every 15 seconds. Completed results are cached in memory.
+- For an `ISSUE` or `FAILED` result, users can confirm **Remember this cause**. The server keeps a normalized error fingerprint, redacted cause/next step, and source build—not raw logs—and shows it for exact matching errors.
 - A separate Gemma terminal coding assistant that previews source files and proposes changes. It never runs commands or writes files.
 - A labeled offline fixture for rehearsing without credentials, an MIT license, tests, and GitHub Actions.
 
@@ -48,6 +50,8 @@ ASSISTANT_TOKEN=YOUR_RANDOM_TOKEN_AT_LEAST_32_CHARACTERS
 JENKINS_FRAME_ORIGIN=http://127.0.0.1:8080
 ```
 
+The systemd service stores confirmed root-cause memory in `/var/lib/jenkinsai/memory.sqlite3`. `MEMORY_DB_PATH` can point to another persistent server-side SQLite path. Entries are shared by users of the service and remain until an administrator removes the database.
+
 Generate the assistant access token with `python3 -c 'import secrets; print(secrets.token_urlsafe(32))'`. Through the private gateway, signed-in Jenkins users connect automatically: Nginx checks their session and adds the token server-side. Never put it in a URL or frontend source. Set `REDACT_VALUES` to additional known literal secrets separated by `|` when needed. Restart the process after changing its environment. For console-only use, set `MONITOR_ENABLED=false` and `AUTO_ANALYZE_FAILURES=false`.
 
 `gemma-4-31b-it` is another documented hosted option. The application uses the Google REST `generateContent` endpoint, sends the API key in `x-goog-api-key`, and has no dependency on local model inference. Verify model access and quota in your own Google account. API access, quota, cost, and data use follow Google's current terms; best-effort redaction does not make sensitive logs safe automatically.
@@ -70,9 +74,11 @@ Ask coding questions directly. `/file backend/jenkins.py` previews a redacted fi
 
 ## Architecture and trust boundaries
 
-Console popup → authenticated FastAPI → fixed Jenkins base (GET only) → redaction and bounded evidence → hosted Gemma 4 → short verdict. Optional follow-up chat is the same path, scoped to that build; off-topic questions are refused without a model call.
+Console popup → authenticated FastAPI → fixed Jenkins base (GET only) → redaction and bounded evidence → hosted Gemma 4 → short verdict. Optional follow-up chat can use the open build or a named pipeline/build; off-topic questions are refused without a model call.
 
 Jenkins and Google credentials exist on the backend only. The model has no tools, shell, deployment, or write endpoints. Log content is treated as untrusted input. Opening Console Output automatically sends that build's redacted excerpt to Gemma; there is no per-build consent dialog. Only signed-in gateway users can call the endpoint. Completed verdicts are cached in server memory and lost on restart.
+
+Root-cause memory is a separate explicit user action. The server persists only a fingerprint, redacted cause/next step, and source build metadata; raw console logs are not stored. The database is shared among users of this service and must be treated as shared operational knowledge.
 
 The assistant access token is a **shared hackathon gate**: every holder can read every job accessible to the Jenkins service account. The private gateway requires a Jenkins login and keeps the token server-side, but it does not enforce per-user Jenkins job permissions. Limit the reader's visible jobs and restrict access to a trusted demo audience. Use per-user authorization, distributed limits, and audit controls before wider deployment.
 
@@ -86,7 +92,7 @@ Read-only suggestions can still be incorrect. Verify the cited line before actin
 .venv/bin/python -m pytest -q
 ```
 
-Tests cover authentication, consent, build-only chat scope, path traversal, fixed-origin GET-only requests, redirect refusal, bounded retrieval, secret redaction, model payloads/errors, history limits, rate limits, security headers, terminal file boundaries, and the demo workflow. Live Gemini/Jenkins integration requires your credentials and is a separate smoke check.
+Tests cover authentication, consent, build-only chat scope and build selection, recurring-error memory persistence/matching, path traversal, fixed-origin GET-only requests, redirect refusal, bounded retrieval, secret redaction, model payloads/errors, history limits, rate limits, security headers, terminal file boundaries, and the demo workflow. Live Gemini/Jenkins integration requires your credentials and is a separate smoke check.
 
 See [demo script](docs/DEMO.md), [contributing](CONTRIBUTING.md), and [security reporting](SECURITY.md).
 

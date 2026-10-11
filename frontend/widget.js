@@ -34,8 +34,9 @@
     #jenkinsai-inspector .ai-result{font-size:12px;color:var(--muted);margin-bottom:7px}
     #jenkinsai-inspector .ai-summary{margin:0 0 8px;font-weight:600}
     #jenkinsai-inspector .ai-evidence,#jenkinsai-inspector .ai-next{margin:5px 0;color:var(--muted);font-size:12px;overflow-wrap:anywhere}
-    #jenkinsai-inspector .ai-actions{display:flex;justify-content:flex-end;gap:10px;padding:0 12px 10px}
-    #jenkinsai-inspector .ai-refresh,#jenkinsai-inspector .ai-ask{border:0;background:transparent;font:inherit;font-size:12px;color:var(--accent);padding:0}
+    #jenkinsai-inspector .ai-memory{margin:6px 0;color:var(--accent);font-size:11px;overflow-wrap:anywhere}
+    #jenkinsai-inspector .ai-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;padding:0 12px 10px}
+    #jenkinsai-inspector .ai-refresh,#jenkinsai-inspector .ai-ask,#jenkinsai-inspector .ai-remember{border:0;background:transparent;font:inherit;font-size:12px;color:var(--accent);padding:0}
     #jenkinsai-inspector .ai-chat{border-top:1px solid var(--border);padding:8px 12px 10px}
     #jenkinsai-inspector .ai-chat-note{margin:0 0 6px;font-size:11px;color:var(--muted)}
     #jenkinsai-inspector .ai-thread{max-height:150px;overflow:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
@@ -60,7 +61,7 @@
   const root = document.createElement("div");
   root.id = "jenkinsai-inspector";
   root.dataset.verdict = "loading";
-  root.innerHTML = `<section class="ai-popup" role="status" aria-live="polite"><div class="ai-head"><span class="ai-dot"></span><strong>Checking console…</strong><button class="ai-close" type="button" aria-label="Close diagnosis">×</button></div><div class="ai-body"><div class="ai-result"></div><p class="ai-summary">JenkinsAI is reading this build.</p><p class="ai-evidence" hidden></p><p class="ai-next" hidden></p></div><div class="ai-actions"><button class="ai-ask" type="button" hidden>Ask about this build</button><button class="ai-refresh" type="button">Check again</button></div><div class="ai-chat" hidden><p class="ai-chat-note">Optional. I only answer questions about this Jenkins build.</p><div class="ai-thread" aria-live="polite"></div><form class="ai-form"><label class="sr-only" for="jenkinsai-question">Question about this build</label><textarea id="jenkinsai-question" rows="2" maxlength="12000" placeholder="Why did this build fail?"></textarea><button type="submit">Ask</button></form></div></section><button class="ai-bot" type="button" aria-label="Show JenkinsAI diagnosis" aria-expanded="true" title="JenkinsAI diagnosis"><svg viewBox="0 0 80 96" aria-hidden="true"><g stroke="currentColor" stroke-width="7" stroke-linecap="round"><path d="M32 72v14h-7M48 72v14h7"/><path d="M23 57 13 66 8 60"/><path class="ai-arm" d="M57 57 67 47 70 38"/></g><rect x="23" y="48" width="34" height="31" rx="12" fill="currentColor"/><rect x="31" y="55" width="18" height="13" rx="6" class="ai-face"/><g class="ai-head-part"><path d="M40 15V8m0 0h4" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><rect x="15" y="15" width="50" height="37" rx="14" fill="currentColor"/><rect x="20" y="20" width="40" height="27" rx="10" class="ai-face"/><g class="ai-eyes" fill="currentColor"><circle cx="32" cy="32" r="3"/><circle cx="48" cy="32" r="3"/></g><path d="M34 40q6 4 12 0" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></g></svg></button>`;
+  root.innerHTML = `<section class="ai-popup" role="status" aria-live="polite"><div class="ai-head"><span class="ai-dot"></span><strong>Checking console…</strong><button class="ai-close" type="button" aria-label="Close diagnosis">×</button></div><div class="ai-body"><div class="ai-result"></div><p class="ai-summary">JenkinsAI is reading this build.</p><p class="ai-evidence" hidden></p><p class="ai-next" hidden></p><p class="ai-memory" hidden></p></div><div class="ai-actions"><button class="ai-remember" type="button" hidden>Remember this cause</button><button class="ai-ask" type="button" hidden>Ask about this build</button><button class="ai-refresh" type="button">Check again</button></div><div class="ai-chat" hidden><p class="ai-chat-note">Asking shares that build’s redacted excerpt with Gemma. You can name another pipeline and build, for example: “Check pipeline testing build #12.”</p><div class="ai-thread" aria-live="polite"></div><form class="ai-form"><label class="sr-only" for="jenkinsai-question">Question about this build</label><textarea id="jenkinsai-question" rows="2" maxlength="12000" placeholder="Why did this build fail?"></textarea><button type="submit">Ask</button></form></div></section><button class="ai-bot" type="button" aria-label="Show JenkinsAI diagnosis" aria-expanded="true" title="JenkinsAI diagnosis"><svg viewBox="0 0 80 96" aria-hidden="true"><g stroke="currentColor" stroke-width="7" stroke-linecap="round"><path d="M32 72v14h-7M48 72v14h7"/><path d="M23 57 13 66 8 60"/><path class="ai-arm" d="M57 57 67 47 70 38"/></g><rect x="23" y="48" width="34" height="31" rx="12" fill="currentColor"/><rect x="31" y="55" width="18" height="13" rx="6" class="ai-face"/><g class="ai-head-part"><path d="M40 15V8m0 0h4" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><rect x="15" y="15" width="50" height="37" rx="14" fill="currentColor"/><rect x="20" y="20" width="40" height="27" rx="10" class="ai-face"/><g class="ai-eyes" fill="currentColor"><circle cx="32" cy="32" r="3"/><circle cx="48" cy="32" r="3"/></g><path d="M34 40q6 4 12 0" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></g></svg></button>`;
   document.body.append(root);
   const popup = root.querySelector(".ai-popup");
   const title = root.querySelector(".ai-head strong");
@@ -68,14 +69,20 @@
   const summary = root.querySelector(".ai-summary");
   const evidence = root.querySelector(".ai-evidence");
   const next = root.querySelector(".ai-next");
+  const memoryNote = root.querySelector(".ai-memory");
   const bot = root.querySelector(".ai-bot");
   const ask = root.querySelector(".ai-ask");
+  const remember = root.querySelector(".ai-remember");
   const chat = root.querySelector(".ai-chat");
   const thread = root.querySelector(".ai-thread");
   const form = root.querySelector(".ai-form");
   const question = root.querySelector("#jenkinsai-question");
   const chatApi = new URL("../api/chat", source);
+  const memoryApi = new URL("../api/memory", source);
   let history = [];
+  let chatJob = jobs.join("/");
+  let chatBuild = build;
+  let remembered = false;
   let chatting = false;
   function syncTheme() {
     const marker = `${document.documentElement.dataset.theme || ""} ${document.documentElement.className} ${document.body.className}`.toLowerCase();
@@ -98,7 +105,7 @@
     chat.hidden = !chat.hidden;
     ask.textContent = chat.hidden ? "Ask about this build" : "Hide chat";
     if (!chat.hidden) {
-      if (!thread.children.length) addChat("model", "Ask about this build’s console, result, or next step. Other topics are refused.");
+      if (!thread.children.length) addChat("model", "Ask about this build, or name another pipeline and build number. JenkinsAI only answers build-related questions.");
       question.focus();
     }
   };
@@ -115,17 +122,28 @@
     const text = question.value.trim();
     if (!text || chatting) return;
     const candidate = [...history.slice(-16), {role: "user", content: text}];
+    const previousJob = chatJob;
+    const previousBuild = chatBuild;
     addChat("user", text);
     question.value = "";
     chatting = true;
     form.querySelector("button").disabled = true;
     try {
-      const response = await fetch(chatApi, {method: "POST", credentials: "same-origin", headers: {"Content-Type": "application/json"}, body: JSON.stringify({messages: candidate, job: jobs.join("/"), build, share_logs: true})});
+      const response = await fetch(chatApi, {method: "POST", credentials: "same-origin", headers: {"Content-Type": "application/json"}, body: JSON.stringify({messages: candidate, job: chatJob, build: chatBuild, share_logs: true})});
       if (!response.ok) throw new Error(response.status === 429 ? "Analysis busy. Try again shortly." : `Could not answer (${response.status}).`);
       const data = await response.json();
       const answer = data.answer || "I only answer questions about this Jenkins build.";
-      if (!data.refused) history = [...candidate, {role: "model", content: String(answer).slice(0, 12000)}];
-      addChat("model", answer);
+      if (!data.refused) {
+        const switchedBuild = data.job && data.build && (data.job !== previousJob || data.build !== previousBuild);
+        const conversation = switchedBuild ? [candidate[candidate.length - 1]] : candidate;
+        history = [...conversation, {role: "model", content: String(answer).slice(0, 12000)}];
+        chatJob = data.job || chatJob;
+        chatBuild = data.build || chatBuild;
+      }
+      const prior = data.memory_match
+        ? `Prior confirmed match: ${data.memory_match.root_cause} (saved from ${data.memory_match.source_job} #${data.memory_match.source_build}).\n`
+        : "";
+      addChat("model", `${data.job && data.build ? `${data.job} #${data.build}\n` : ""}${prior}${answer}`);
     } catch (error) {
       addChat("model", error.message || "Try again.");
     } finally {
@@ -143,6 +161,8 @@
     result.textContent = `Build #${build}`;
     summary.textContent = "JenkinsAI is reading this build.";
     evidence.hidden = next.hidden = true;
+    memoryNote.hidden = true;
+    remember.hidden = true;
     try {
       const response = await fetch(api, {method: "POST", credentials: "same-origin", headers: {"Content-Type": "application/json"}, body: JSON.stringify({job: jobs.join("/"), build})});
       if (!response.ok) throw new Error(response.status === 429 ? "Analysis busy. Try again shortly." : `Could not analyze build (${response.status}).`);
@@ -163,6 +183,20 @@
       summary.textContent = data.summary || "Review the console.";
       showText(evidence, data.evidence, "Evidence: ");
       showText(next, data.next, "Next: ");
+      if (data.memory_match) {
+        const saved = data.memory_match;
+        remembered = true;
+        memoryNote.textContent = `Seen before (${saved.source_job} #${saved.source_build}): ${saved.root_cause} Next: ${saved.next_step}`;
+        memoryNote.hidden = false;
+      } else if (remembered) {
+        memoryNote.textContent = "Saved on the server for future matching errors. Raw logs were not saved.";
+        memoryNote.hidden = false;
+      }
+      if (["ISSUE", "FAILED"].includes(data.verdict)) {
+        remember.hidden = false;
+        remember.textContent = data.memory_match || remembered ? "Already remembered" : "Remember this cause";
+        remember.disabled = Boolean(data.memory_match || remembered);
+      }
       if (data.partial_log && data.verdict === "UNCERTAIN") showText(next, "Open the full log to confirm; this analysis used an excerpt.", "Next: ");
     } catch (error) {
       root.dataset.verdict = "error";
@@ -172,5 +206,22 @@
       ask.hidden = true;
     }
   }
+  remember.onclick = async () => {
+    if (remember.disabled || !window.confirm("Save this redacted cause and next step on the JenkinsAI server for future matching errors? Raw logs will not be saved.")) return;
+    remember.disabled = true;
+    try {
+      const nextStep = next.textContent.replace(/^Next:\s*/, "") || "Verify the cited evidence on a future matching build.";
+      const response = await fetch(memoryApi, {method: "POST", credentials: "same-origin", headers: {"Content-Type": "application/json"}, body: JSON.stringify({job: jobs.join("/"), build, root_cause: summary.textContent, next_step: nextStep})});
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || `Could not save diagnosis (${response.status}).`);
+      remembered = true;
+      memoryNote.textContent = "Saved on the server for future matching errors. Raw logs were not saved.";
+      memoryNote.hidden = false;
+      remember.textContent = data.saved ? "Remembered on server" : "Already remembered";
+    } catch (error) {
+      remember.disabled = false;
+      remember.textContent = error.message || "Could not save";
+    }
+  };
   inspect();
 })();

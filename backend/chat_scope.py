@@ -1,6 +1,6 @@
 import re
 
-REFUSAL = "I only answer questions about this Jenkins build's console output, result, and next verification step."
+REFUSAL = "I only answer Jenkins build questions about console output, results, and next verification steps."
 
 _OFF_TOPIC = re.compile(
     r"(?i)\b(weather|joke|jokes|poem|poetry|recipe|song|lyrics|story|riddle|trivia|"
@@ -23,6 +23,11 @@ _FOLLOW_UP = re.compile(
     r"can i|could i|should i|fix|explain|next|cause|evidence|summar(?:y|ise|ize)|"
     r"diagnose|analy[sz]e|help|tell me|show me)\b"
 )
+_BUILD_REFERENCE = re.compile(
+    r"(?i)\b(?:pipeline|job)\s+(.+?)\s+"
+    r"(?:(?:hai|iska|ka|ki|ke)\s+)*(?:build|run)"
+    r"\s*(?:number|no\.?)?\s*#?\s*(\d+)\b"
+)
 
 
 def build_question_allowed(text: str) -> bool:
@@ -38,3 +43,13 @@ def build_question_allowed(text: str) -> bool:
     if len(question) <= 24:
         return True
     return bool(re.search(r"(?i)\b(this|that|it|build|job|log|console|error|fail|stage|test|agent|pipeline)\b", question))
+
+
+def parse_build_reference(text: str) -> tuple[str, int] | None:
+    match = _BUILD_REFERENCE.search(text or "")
+    if not match:
+        return None
+    job = match.group(1).strip().strip("`'\" ")
+    if not job or len(job) > 500:
+        return None
+    return job, int(match.group(2))

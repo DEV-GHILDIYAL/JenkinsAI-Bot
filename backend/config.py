@@ -18,6 +18,7 @@ class Settings:
     monitor_enabled: bool = True
     monitor_interval: int = 15
     auto_analyze: bool = False
+    memory_db_path: str = "./data/jenkinsai-memory.sqlite3"
 
     @classmethod
     def from_env(cls):
@@ -34,10 +35,13 @@ class Settings:
             monitor_enabled=os.getenv("MONITOR_ENABLED", "true").lower() == "true",
             monitor_interval=int(os.getenv("MONITOR_INTERVAL_SECONDS", "15")),
             auto_analyze=os.getenv("AUTO_ANALYZE_FAILURES", "false").lower() == "true",
+            memory_db_path=os.getenv("MEMORY_DB_PATH", "./data/jenkinsai-memory.sqlite3"),
         )
         url = urlsplit(settings.jenkins_url)
         if not 5 <= settings.monitor_interval <= 300:
             raise ValueError("MONITOR_INTERVAL_SECONDS must be between 5 and 300")
+        if not settings.memory_db_path or settings.memory_db_path == ":memory:":
+            raise ValueError("MEMORY_DB_PATH must be a persistent SQLite database path")
         if url.scheme not in {"http", "https"} or not url.hostname or url.username or url.password or url.query or url.fragment:
             raise ValueError("JENKINS_URL must be a fixed HTTP(S) base URL without credentials, query, or fragment")
         if not re.fullmatch(r"gemma-4-[a-z0-9-]+", settings.model):

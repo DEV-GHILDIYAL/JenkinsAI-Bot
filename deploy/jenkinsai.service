@@ -18,6 +18,9 @@ PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
 UMask=0077
+StateDirectory=jenkinsai
+StateDirectoryMode=0700
+Environment=MEMORY_DB_PATH=/var/lib/jenkinsai/memory.sqlite3
 
 [Install]
 WantedBy=multi-user.target
