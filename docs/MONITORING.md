@@ -34,7 +34,7 @@ curl --fail http://127.0.0.1:8000/health
 
 The provided private Nginx gateway serves the same Jenkins UI and inserts `/assistant/static/widget.js` into HTML responses on every page load. It proxies the assistant at `/assistant/` on the same origin, preserving frontend/API relative paths. Jenkins remains on its original port 8080. The widget appears automatically through the gateway at 8090, **not** when browsing Jenkins directly at 8080. This is a reverse-proxy integration, not a Jenkins Java plugin.
 
-Install Nginx if needed and review its default listeners. The widget script itself only adds a listener on 127.0.0.1:8090 and refuses to overwrite an existing config:
+Install Nginx if needed and review its default listeners. The gateway listens only on 127.0.0.1:8090. It checks each browser's Jenkins session and adds the assistant token server-side from the root-only environment file, so developers do not enter a second token. The install script refuses to overwrite an existing config; after an update use `bash deploy/update-widget-proxy.sh`:
 
 ```bash
 sudo apt-get update
@@ -49,7 +49,7 @@ ssh -o ExitOnForwardFailure=yes -i ~/JenkinsAI-Server-Key.pem \
   -L 8090:127.0.0.1:8090 ubuntu@3.110.55.60
 ```
 
-Keep that terminal open. Open **http://127.0.0.1:8090/** for Jenkins; the bottom-right JenkinsAI button now loads on every page. Open it and enter the assistant access token in live mode. Tokens are only held in page memory, so reconnect after navigation/reload. The backend continues monitoring and keeps recent diagnoses meanwhile. Closed widgets show an unread update count after connecting. Open **http://127.0.0.1:8090/assistant/** for the standalone UI.
+Keep that terminal open. Open **http://127.0.0.1:8090/** for Jenkins and sign in. The bottom-right JenkinsAI button loads on every page and connects automatically. The backend continues monitoring with no browser open. Closed widgets show an unread update count. **http://127.0.0.1:8090/assistant/** opens the standalone UI through the same gateway. Direct access to the backend on port 8000 still requires the assistant token.
 
 The gateway does not disable/strip Jenkins CSP. A restrictive custom Jenkins script policy may block the injected script: use an approved site-specific integration rather than weakening security globally. Existing reverse proxies can incorporate the reviewed snippet instead. Set Jenkins Location URL to the gateway origin if Jenkins reports a reverse-proxy warning. Public use requires your normal authenticated HTTPS gateway and its exact browser origin in JENKINS_FRAME_ORIGIN; this example is a private SSH demo.
 
@@ -59,11 +59,11 @@ Jenkins proxy docs: https://www.jenkins.io/doc/book/system-administration/revers
 ## Verify the complete flow
 
 1. Start the assistant and let one polling sweep establish a baseline.
-2. Open the gateway's Jenkins UI, open JenkinsAI, and connect with the assistant token.
+2. Sign in to the gateway's Jenkins UI and open JenkinsAI. It connects automatically.
 3. Run `jenkins-ai-demo` with FAIL_TEST checked.
 4. The monitor shows RUNNING (if a poll sees it) and then FAILURE. Automatic analysis follows when enabled. A very short build may only show its final status.
 5. Run with FAIL_TEST unchecked. The monitor shows SUCCESS without a model call.
-6. Reload Jenkins: the launcher remains. Reconnect; recent events/diagnoses are available.
+6. Reload Jenkins: the launcher remains and reconnects automatically; recent events/diagnoses are available.
 
 On the demo EC2 instance, `sudo python3 deploy/verify-live.py` checks the private gateway, reader permissions, assistant API, monitor, and a Gemma response without printing credentials.
 
@@ -73,5 +73,5 @@ On the demo EC2 instance, `sudo python3 deploy/verify-live.py` checks the privat
 - Most recent 30 builds per job, 100 job/folder entries per sweep, 100 retained events, and 100 queued analyses. The UI reports scan truncation. Very busy servers need event ingestion and durable storage.
 - Detection delay includes polling interval and sequential metadata request time. Each upstream call has a timeout. This is polling, not an instant Jenkins webhook.
 - AI runs separately from the polling loop, reuses the two-analysis concurrency limit and shared 10 calls/minute limit, and retries provider/busy failures up to three times with a 60-second delay. Failed analysis is reported for manual retry.
-- All holders of the shared assistant token see the reader's monitor events/diagnoses. This prototype does not enforce Jenkins per-user permissions or SSO.
+- Gateway users with Jenkins Overall/Read see the reader account's monitor events and diagnoses. The gateway checks Jenkins login, but the backend uses one shared reader identity, so this prototype does not enforce per-user job permissions. Direct backend access still uses the shared assistant token.
 - Demo mode is a static fixture, not a simulated moving pipeline. It shows monitor readiness and supports manual canned diagnosis; use live Jenkins to demonstrate transitions.

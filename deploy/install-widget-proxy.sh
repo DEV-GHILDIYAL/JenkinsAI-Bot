@@ -10,11 +10,15 @@ if ! sudo nginx -V 2>&1 | grep -q -- '--with-http_sub_module'; then
   printf 'nginx http_sub_module is required; config has not been installed.\n' >&2
   exit 1
 fi
+if ! sudo nginx -V 2>&1 | grep -q -- '--with-http_auth_request_module'; then
+  printf 'nginx http_auth_request_module is required; config has not been installed.\n' >&2
+  exit 1
+fi
 if sudo test -e /etc/nginx/conf.d/jenkinsai.conf; then
   printf 'Existing /etc/nginx/conf.d/jenkinsai.conf found. Review it before replacing.\n' >&2
   exit 1
 fi
-sudo install -m 644 deploy/nginx-jenkinsai.conf /etc/nginx/conf.d/jenkinsai.conf
+sudo python3 deploy/render-widget-proxy.py
 if ! sudo nginx -t; then
   sudo rm -- /etc/nginx/conf.d/jenkinsai.conf
   printf 'New proxy config failed validation and was removed.\n' >&2

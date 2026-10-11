@@ -2,7 +2,9 @@
 const el = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const embedded = params.get("widget") === "1";
+const gateway = location.pathname.startsWith("/assistant/");
 if (embedded) document.body.classList.add("widget");
+if (gateway) document.querySelector(".connection").hidden = true;
 let history = [], folder = "", selectedJob = "", jobEntries = [], previewed = false, busy = false, connected = false;
 let monitorTimer = null, monitorCursor = 0;
 let monitorInstance = null;
@@ -128,7 +130,7 @@ async function connect() {
   try {
     botState("thinking"); status("Connecting…"); const health = await api("health");
     el("mode").textContent = health.demo ? "Demo · read-only" : "Online · read-only";
-    document.querySelector(".connection").hidden = health.demo;
+    document.querySelector(".connection").hidden = health.demo || gateway;
     await loadJobs(); connected = true;
     document.querySelector(".connection").open = false;
     el("connection-state").textContent = health.demo ? "Offline demo ready · sample data" : "Connected to Jenkins · live mode";
