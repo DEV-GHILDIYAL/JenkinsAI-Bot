@@ -65,6 +65,8 @@ Jenkins proxy docs: https://www.jenkins.io/doc/book/system-administration/revers
 5. Run with FAIL_TEST unchecked. The monitor shows SUCCESS without a model call.
 6. Reload Jenkins: the launcher remains. Reconnect; recent events/diagnoses are available.
 
+On the demo EC2 instance, `sudo python3 deploy/verify-live.py` checks the private gateway, reader permissions, assistant API, monitor, and a Gemma response without printing credentials.
+
 ## Prototype limits
 
 - One backend worker. State is in memory: restart seeds historical completed builds without analyzing them and discards old events. Builds completed while the service was offline are not replayed.
