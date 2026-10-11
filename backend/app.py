@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, model_validator
 
+from .chat_scope import REFUSAL, build_question_allowed
 from .config import Settings
 from .jenkins import Jenkins
 from .model import Gemma
@@ -25,8 +26,8 @@ class Message(BaseModel):
 
 class ChatRequest(BaseModel):
     messages: list[Message] = Field(min_length=1, max_length=20)
-    job: str | None = Field(default=None, max_length=500)
-    build: int | None = Field(default=None, ge=1)
+    job: str = Field(min_length=1, max_length=500)
+    build: int = Field(ge=1)
     share_logs: bool = False
 
     @model_validator(mode="after")
@@ -37,9 +38,7 @@ class ChatRequest(BaseModel):
             raise ValueError("Conversation roles must alternate")
         if sum(len(m.content) for m in self.messages) > 40000:
             raise ValueError("Conversation is too long; clear it and retry")
-        if (self.job is None) != (self.build is None):
-            raise ValueError("Job and build must be selected together")
-        if self.job is not None and not self.share_logs:
+        if not self.share_logs:
             raise ValueError("Explicit consent is required to send logs")
         return self
 
@@ -174,8 +173,10 @@ def create_app(settings=None, jenkins=None, model=None):
 
     @app.post("/api/chat", dependencies=[Depends(authorize)])
     async def chat(body: ChatRequest):
+        if not build_question_allowed(body.messages[-1].content):
+            return {"answer": REFUSAL, "refused": True, "demo": s.demo, "model": None, "context": None}
         answer, ctx = await generate(body.messages, body.job, body.build)
-        return {"answer": answer, "demo": s.demo, "model": None if s.demo else s.model, "context": {k: v for k, v in ctx.items() if k != "log"} if ctx else None}
+        return {"answer": answer, "refused": False, "demo": s.demo, "model": None if s.demo else s.model, "context": {k: v for k, v in ctx.items() if k != "log"} if ctx else None}
 
     @app.post("/api/inspect", dependencies=[Depends(authorize)])
     async def inspect(body: InspectRequest):

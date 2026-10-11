@@ -6,6 +6,7 @@
 
 - A compact popup appears when a signed-in user opens a Jenkins build's **Console Output** through the private gateway.
 - Gemma checks the opened build's redacted console excerpt and returns a verdict, one evidence line, and one next step.
+- After the diagnosis, **Ask about this build** opens an optional chat. The bot answers only questions about that Jenkins build's console, result, and next step; other topics are refused before a model call.
 - Jenkins `SUCCESS` is checked for unresolved log errors too; the popup can flag a **Hidden issue**.
 - Running builds are rechecked every 15 seconds. Completed results are cached in memory.
 - A separate Gemma terminal coding assistant that previews source files and proposes changes. It never runs commands or writes files.
@@ -69,7 +70,7 @@ Ask coding questions directly. `/file backend/jenkins.py` previews a redacted fi
 
 ## Architecture and trust boundaries
 
-Console popup → authenticated FastAPI → fixed Jenkins base (GET only) → redaction and bounded evidence → hosted Gemma 4 → short verdict.
+Console popup → authenticated FastAPI → fixed Jenkins base (GET only) → redaction and bounded evidence → hosted Gemma 4 → short verdict. Optional follow-up chat is the same path, scoped to that build; off-topic questions are refused without a model call.
 
 Jenkins and Google credentials exist on the backend only. The model has no tools, shell, deployment, or write endpoints. Log content is treated as untrusted input. Opening Console Output automatically sends that build's redacted excerpt to Gemma; there is no per-build consent dialog. Only signed-in gateway users can call the endpoint. Completed verdicts are cached in server memory and lost on restart.
 
@@ -85,7 +86,7 @@ Read-only suggestions can still be incorrect. Verify the cited line before actin
 .venv/bin/python -m pytest -q
 ```
 
-Tests cover authentication, consent, path traversal, fixed-origin GET-only requests, redirect refusal, bounded retrieval, secret redaction, model payloads/errors, history limits, rate limits, security headers, terminal file boundaries, and the demo workflow. Live Gemini/Jenkins integration requires your credentials and is a separate smoke check.
+Tests cover authentication, consent, build-only chat scope, path traversal, fixed-origin GET-only requests, redirect refusal, bounded retrieval, secret redaction, model payloads/errors, history limits, rate limits, security headers, terminal file boundaries, and the demo workflow. Live Gemini/Jenkins integration requires your credentials and is a separate smoke check.
 
 See [demo script](docs/DEMO.md), [contributing](CONTRIBUTING.md), and [security reporting](SECURITY.md).
 

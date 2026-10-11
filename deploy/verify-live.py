@@ -43,7 +43,7 @@ monitor = json.loads(check('Assistant monitor', 'http://127.0.0.1:8000/api/monit
 print('Monitor:', 'jobs', monitor['job_count'], 'events',
       [(event['kind'], event['build'], event['result']) for event in monitor['events']])
 chat_headers = {**assistant, 'Content-Type': 'application/json'}
-chat_body = json.dumps({'messages': [{'role': 'user', 'content': 'Say hello in one short sentence.'}]}).encode()
+chat_body = json.dumps({'messages': [{'role': 'user', 'content': 'Why did this Jenkins build fail? Cite one log line.'}], 'job': 'jenkins-ai-demo', 'build': 1, 'share_logs': True}).encode()
 chat = json.loads(check('Gemma chat', 'http://127.0.0.1:8000/api/chat', chat_headers, chat_body))
 assert chat['answer'].strip() and chat['demo'] is False
 print('Live Jenkins reader, gateway, monitor, and Gemma verified.')
