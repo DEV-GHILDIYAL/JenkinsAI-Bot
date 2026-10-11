@@ -147,17 +147,22 @@
     thread.append(node);
     thread.scrollTop = thread.scrollHeight;
   }
-  form.onsubmit = async event => {
-    event.preventDefault();
+  async function submitQuestion(event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation();
+    }
     const text = question.value.trim();
-    if (!text || chatting) return;
+    if (!text || chatting) return false;
     const candidate = [...history.slice(-16), {role: "user", content: text}];
     const previousJob = chatJob;
     const previousBuild = chatBuild;
     addChat("user", text);
     question.value = "";
     chatting = true;
-    form.querySelector("button").disabled = true;
+    const btn = form.querySelector("button");
+    if (btn) btn.disabled = true;
     try {
       const response = await fetch(chatApi, {method: "POST", credentials: "same-origin", headers: {"Content-Type": "application/json"}, body: JSON.stringify({messages: candidate, job: chatJob, build: chatBuild, share_logs: true})});
       if (!response.ok) throw new Error(response.status === 429 ? "Analysis busy. Try again shortly." : await errorMessage(response, "Could not answer"));
@@ -178,11 +183,25 @@
       addChat("model", error.message || "Try again.");
     } finally {
       chatting = false;
-      form.querySelector("button").disabled = false;
+      if (btn) btn.disabled = false;
       question.focus();
     }
+    return false;
+  }
+  form.onsubmit = submitQuestion;
+  form.addEventListener("submit", submitQuestion, true);
+  const sendBtn = form.querySelector("button");
+  if (sendBtn) {
+    sendBtn.onclick = submitQuestion;
+    sendBtn.addEventListener("click", submitQuestion, true);
+  }
+  question.onkeydown = event => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      submitQuestion(event);
+    }
   };
-  question.onkeydown = event => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); form.requestSubmit(); } };
   let timer;
   async function inspect() {
     clearTimeout(timer);
