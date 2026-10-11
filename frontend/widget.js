@@ -232,9 +232,12 @@
         addChat("model", "Ask about this build, or name another pipeline and build number. JenkinsAI answers build questions.");
       }
       root.dataset.verdict = data.verdict.toLowerCase();
-      if (badgeText) badgeText.textContent = data.verdict;
+      const catLabel = data.category === "APPLICATION"
+        ? "App Code Issue"
+        : (data.category === "DEVOPS" ? "DevOps / Infra Issue" : "");
+      if (badgeText) badgeText.textContent = catLabel || data.verdict;
       title.textContent = ({CLEAN: "No issue found", ISSUE: "Issue detected", FAILED: "Build failed", UNCERTAIN: "Review needed"})[data.verdict] || "Review needed";
-      result.textContent = `Build #${build} · ${data.jenkins_result || "UNKNOWN"}`;
+      result.textContent = `Build #${build} · ${catLabel ? `${catLabel} · ` : ""}${data.jenkins_result || "UNKNOWN"}`;
       summary.textContent = data.summary || "Review the console.";
       showText(evidence, data.evidence, "Evidence: ");
       showText(next, data.next, "Next: ");

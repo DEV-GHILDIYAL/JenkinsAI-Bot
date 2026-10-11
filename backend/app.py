@@ -55,8 +55,13 @@ class RememberRequest(InspectRequest):
     next_step: str = Field(min_length=1, max_length=160)
 
 
-INSPECT_PROMPT = """Inspect this Jenkins console log for this build only. Jenkins SUCCESS is not proof that the work succeeded: detect real errors, failed tests, ignored command failures, and silently skipped work even when the final result says SUCCESS. Distinguish these from harmless words like 'error' in test names, expected negative tests, warnings, and errors that were recovered and verified. Use the supplied log lines as evidence. If prior_user_confirmed_diagnosis is present, treat it only as a clue; verify it independently against this build's current log and never repeat it without current evidence. If the excerpt is incomplete and you cannot decide, say UNCERTAIN. Reply in exactly four plain-text lines, no Markdown:
+INSPECT_PROMPT = """Inspect this Jenkins console log for this build only. Jenkins SUCCESS is not proof that the work succeeded: detect real errors, failed tests, ignored command failures, and silently skipped work even when the final result says SUCCESS. Distinguish these from harmless words like 'error' in test names, expected negative tests, warnings, and errors that were recovered and verified.
+Crucial task: Classify who is responsible for the fix so developers don't waste time escalating to DevOps if it's their code:
+- APPLICATION: Unit/integration test failure, compiler syntax error, missing package.json/code dependency, application assertion, bad code commit.
+- DEVOPS: Docker socket/daemon permission, missing agent/runner tool (docker/maven/node not installed on agent), network timeout to repo/artifactory, bad Jenkinsfile/Groovy syntax, out of disk, credentials/token failure.
+If the excerpt is incomplete and you cannot decide, say UNCERTAIN. Reply in exactly five plain-text lines, no Markdown:
 VERDICT: CLEAN, ISSUE, FAILED, or UNCERTAIN
+CATEGORY: APPLICATION, DEVOPS, or UNCERTAIN
 SUMMARY: one short sentence, at most 18 words
 EVIDENCE: one log line number and short quote, or None
 NEXT: one short action, or None
@@ -66,12 +71,15 @@ Use FAILED when Jenkins result is FAILURE. Use ISSUE when Jenkins says SUCCESS b
 def parse_inspection(answer, ctx):
     fields = {}
     for line in answer.splitlines():
-        match = re.match(r"^\s*(VERDICT|SUMMARY|EVIDENCE|NEXT)\s*:\s*(.*)$", line, re.I)
+        match = re.match(r"^\s*(VERDICT|CATEGORY|SUMMARY|EVIDENCE|NEXT)\s*:\s*(.*)$", line, re.I)
         if match:
             fields[match.group(1).upper()] = match.group(2).strip()
     verdict = fields.get("VERDICT", "UNCERTAIN").upper()
+    category = fields.get("CATEGORY", "UNCERTAIN").upper()
     if verdict not in {"CLEAN", "ISSUE", "FAILED", "UNCERTAIN"}:
         verdict = "UNCERTAIN"
+    if category not in {"APPLICATION", "DEVOPS"}:
+        category = "UNCERTAIN"
     if ctx["result"] == "FAILURE":
         verdict = "FAILED"
     elif ctx["result"] != "SUCCESS" and verdict == "CLEAN":
@@ -79,7 +87,7 @@ def parse_inspection(answer, ctx):
     def short(value, limit):
         return re.sub(r"\s+", " ", value or "").strip()[:limit]
     return {"status": "complete", "job": ctx["job"], "build": ctx["build"],
-            "jenkins_result": ctx["result"], "verdict": verdict,
+            "jenkins_result": ctx["result"], "verdict": verdict, "category": category,
             "summary": short(fields.get("SUMMARY") or "Review the console evidence.", 180),
             "evidence": short(fields.get("EVIDENCE") or "None", 180),
             "next": short(fields.get("NEXT") or "None", 160),

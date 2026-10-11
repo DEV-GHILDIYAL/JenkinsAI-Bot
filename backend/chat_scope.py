@@ -26,21 +26,26 @@ _FOLLOW_UP = re.compile(
     r"kyun|kyu|kya|kaise|batao|samjhao|check|dikhao|bata|ye|yeh|iska|iski)\b"
 )
 _BUILD_PATTERNS = [
-    # Explicit "pipeline <job> [hai iska ka ki...] build #<num>"
+    # "open/check pipeline <job> [hai iska...] build #<num>"
     re.compile(
         r"(?i)\b(?:pipeline|job)\s+([a-zA-Z0-9_\-/\.]+)"
+        r"(?:\s+(?:hai|iska|iski|ka|ki|ke|ko|mein|me|par|wala|wali))*"
+        r"\s+(?:build|run)\s*(?:number|no\.?|#)?\s*#?(\d+)\b"
+    ),
+    # "<job> pipeline/job build #<num>" (e.g. "open testing pipeline build 1")
+    re.compile(
+        r"(?i)\b([a-zA-Z0-9_\-/\.]+)\s+(?:pipeline|job)"
         r"(?:\s+(?:hai|iska|iski|ka|ki|ke|ko|mein|me|par|wala|wali))*"
         r"\s+(?:build|run)\s*(?:number|no\.?|#)?\s*#?(\d+)\b"
     ),
     # "build #<num> [of/ka/ki] pipeline/job <job>"
     re.compile(
         r"(?i)\b(?:build|run)\s*(?:number|no\.?|#)?\s*#?(\d+)\s+"
-        r"(?:of|in|for|from|ka|ki|ke)?\s*(?:pipeline|job)\s+([a-zA-Z0-9_\-/\.]+)\b"
+        r"(?:of|in|for|from|ka|ki|ke)?\s*(?:pipeline|job)?\s+([a-zA-Z0-9_\-/\.]+)\b"
     ),
-    # Direct "<job> build #<num>" (not preceded by 'this', 'that', 'current')
+    # Direct "<job> build #<num>" (e.g. "testing build 1")
     re.compile(
-        r"(?i)\b(?<!this\s)(?<!that\s)(?<!current\s)(?<!ye\s)(?<!yeh\s)([a-zA-Z0-9_\-/\.]+)"
-        r"\s+(?:(?:ka|ki|ke|ko)\s+)?(?:build|run)\s*(?:number|no\.?|#)?\s*#?(\d+)\b"
+        r"(?i)\b([a-zA-Z0-9_\-/\.]+)\s+(?:(?:ka|ki|ke|ko)\s+)?(?:build|run)\s*(?:number|no\.?|#)?\s*#?(\d+)\b"
     ),
 ]
 
@@ -76,6 +81,8 @@ def parse_build_reference(text: str) -> tuple[str, int] | None:
             else:
                 job_name = g1.strip("`'\" ").strip()
                 build_num = int(g2)
-            if job_name and len(job_name) <= 500 and job_name.lower() not in {"this", "that", "it", "current", "ye", "yeh"}:
-                return job_name, build_num
+            if job_name and len(job_name) <= 500:
+                job_name = re.sub(r"(?i)^(open|check|view|analyse|analyze|dekho|dekh)\s+", "", job_name).strip()
+                if job_name and job_name.lower() not in {"this", "that", "it", "current", "ye", "yeh", "pipeline", "job"}:
+                    return job_name, build_num
     return None
