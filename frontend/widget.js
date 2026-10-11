@@ -257,37 +257,35 @@
   async function inspect() {
     clearTimeout(timer);
     root.dataset.verdict = "loading";
-    title.textContent = "Checking console…";
-    result.textContent = `Build #${build}`;
-    summary.textContent = "JenkinsAI is reading this build.";
-    evidence.hidden = next.hidden = true;
-    memoryNote.hidden = true;
-    remember.hidden = true;
+    if (contextStatus) contextStatus.textContent = "Inspecting console...";
+    if (toastBadge) toastBadge.textContent = "Diagnosing...";
+    if (toastText) toastText.textContent = `JenkinsAI is reading Build #${build}...`;
+
     try {
-      const response = await fetch(api, {method: "POST", credentials: "same-origin", headers: {"Content-Type": "application/json"}, body: JSON.stringify({job: jobs.join("/"), build})});
-      if (!response.ok) throw new Error(response.status === 429 ? "Analysis busy. Try again shortly." : await errorMessage(response, "Could not analyze build"));
+      const response = await fetch(api, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({job: jobs.join("/"), build})
+      });
+      if (!response.ok) {
+        throw new Error(response.status === 429 ? "Analysis busy. Try again shortly." : await errorMessage(response, "Could not analyze build"));
+      }
       const data = await response.json();
       if (data.status === "running") {
-        title.textContent = "Pipeline running";
-        summary.textContent = "I’ll check the console when this run finishes.";
-        ask.hidden = true;
-        chat.hidden = true;
-        ask.textContent = "Ask about this build";
-        timer = setTimeout(inspect, 15000);
+        if (contextStatus) contextStatus.textContent = "Pipeline running...";
+        if (toastBadge) toastBadge.textContent = "Running";
+        if (toastText) toastText.textContent = "I’ll check the console as soon as this build run finishes.";
+        timer = setTimeout(inspect, 10000);
         return;
       }
-      ask.hidden = false;
-      chat.hidden = false;
-      ask.textContent = "Hide chat";
-      if (!thread.children.length) {
-        addChat("model", "Ask about this build, or name another pipeline and build number. JenkinsAI answers build questions.");
-      }
+
       cachedDiagnosis = data;
-      root.dataset.verdict = data.verdict.toLowerCase();
+      root.dataset.verdict = (data.verdict || "unknown").toLowerCase();
       const catLabel = data.category === "APPLICATION"
         ? "App Code Issue"
         : (data.category === "DEVOPS" ? "DevOps / Infra Issue" : "");
-      
+
       // Update Expressive Mouth based on build outcome
       if (mouth) {
         if (data.verdict === "CLEAN") {
@@ -300,41 +298,30 @@
       }
 
       // Update Quick Summary Toast (compact popup above bot)
-      toastBadge.textContent = catLabel || data.verdict;
-      toastText.textContent = data.summary || "Build finished.";
-      contextStatus.textContent = `${data.jenkins_result || "UNKNOWN"}${catLabel ? ` · ${catLabel}` : ""}`;
-      
+      if (toastBadge) toastBadge.textContent = catLabel || data.verdict;
+      if (toastText) toastText.textContent = data.summary || "Build finished.";
+      if (contextStatus) contextStatus.textContent = `${data.jenkins_result || "UNKNOWN"}${catLabel ? ` · ${catLabel}` : ""}`;
+
+      // Update chat thread with initial diagnosis summary if not already populated
+      if (thread && !thread.children.length) {
+        addChat("model", `Build #${build} Summary:\n${data.summary}\n\nEvidence: ${data.evidence || "None"}\nNext: ${data.next || "None"}`);
+      }
+
       // If user hasn't opened chat yet, keep toast visible
-      if (chatPanel.hidden) {
+      if (chatPanel && chatPanel.hidden && toast) {
         toast.hidden = false;
       }
     } catch (error) {
       root.dataset.verdict = "error";
       if (mouth) mouth.setAttribute("d", "M12 24q6 -4 12 0");
-      toastBadge.textContent = "Error";
-      toastText.textContent = error.message || "Could not analyze build.";
-      contextStatus.textContent = "Analysis unavailable";
-      if (chatPanel.hidden) {
+      if (toastBadge) toastBadge.textContent = "Error";
+      if (toastText) toastText.textContent = error.message || "Could not analyze build.";
+      if (contextStatus) contextStatus.textContent = "Analysis unavailable";
+      if (chatPanel && chatPanel.hidden && toast) {
         toast.hidden = false;
       }
     }
   }
-  remember.onclick = async () => {
-    if (remember.disabled || !window.confirm("Save this redacted cause and next step on the JenkinsAI server for future matching errors? Raw logs will not be saved.")) return;
-    remember.disabled = true;
-    try {
-      const nextStep = next.textContent.replace(/^Next:\s*/, "") || "Verify the cited evidence on a future matching build.";
-      const response = await fetch(memoryApi, {method: "POST", credentials: "same-origin", headers: {"Content-Type": "application/json"}, body: JSON.stringify({job: jobs.join("/"), build, root_cause: summary.textContent, next_step: nextStep})});
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || `Could not save diagnosis (${response.status}).`);
-      remembered = true;
-      memoryNote.textContent = "Saved on the server for future matching errors. Raw logs were not saved.";
-      memoryNote.hidden = false;
-      remember.textContent = data.saved ? "Remembered on server" : "Already remembered";
-    } catch (error) {
-      remember.disabled = false;
-      remember.textContent = error.message || "Could not save";
-    }
-  };
+
   inspect();
 })();
