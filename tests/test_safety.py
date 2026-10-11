@@ -37,7 +37,7 @@ def test_live_auth_no_public_api():
     assert c.get("/health").status_code == 200
     for path in ["/api/jobs", "/api/builds?job=x", "/api/context?job=x&build=1"]:
         assert c.get(path).status_code == 401
-    assert c.post("/api/memory", json={"job": "x", "build": 1, "root_cause": "cause", "next_step": "verify"}).status_code == 401
+    assert c.post("/api/memory", json={"job": "x", "build": 1, "root_cause": "cause", "next_step": "verify"}).status_code == 404
     assert c.post("/api/chat", json={"messages": [{"role": "user", "content": "hi"}]}).status_code == 401
     assert c.get("/api/jobs", headers={"Authorization": "Bearer wrong"}).status_code == 401
 

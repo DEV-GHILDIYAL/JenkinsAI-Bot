@@ -18,7 +18,8 @@
   const style = document.createElement("style");
   style.textContent = `
     /* ── Clean Professional Blue Theme ── */
-    #jenkinsai-inspector{--bg:#f5f8fd;--fg:#23344d;--muted:#61738b;--border:#d8e3f0;--accent:#3975c9;--accent-hover:#2b62ad;--accent-soft:#eaf2fc;--good:#138568;--bad:#c74754;--warn:#a96a13;--surface:#ffffff;--code-bg:#f0f4f9;--shadow:0 12px 36px rgba(28,57,96,0.16),0 3px 10px rgba(28,57,96,0.07);position:fixed;right:24px;bottom:20px;z-index:2147483647;color:var(--fg);font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+    #jenkinsai-inspector{--bg:#f5f8fd;--fg:#23344d;--muted:#61738b;--border:#d8e3f0;--accent:#3975c9;--accent-hover:#2b62ad;--button:#3975c9;--button-hover:#2b62ad;--accent-soft:#eaf2fc;--good:#138568;--bad:#c74754;--warn:#a96a13;--surface:#ffffff;--code-bg:#f0f4f9;--shadow:0 12px 36px rgba(28,57,96,0.16),0 3px 10px rgba(28,57,96,0.07);position:fixed;right:24px;bottom:20px;z-index:2147483647;color:var(--fg);font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+    #jenkinsai-inspector[data-theme=dark]{--bg:#172235;--fg:#e5edf8;--muted:#a6b7ce;--border:#354760;--accent:#79aef8;--accent-hover:#98c0ff;--button:#356fb8;--button-hover:#477fc5;--accent-soft:#233752;--good:#5bd3aa;--bad:#ff8b96;--warn:#f4c36a;--surface:#202f45;--code-bg:#19283c;--shadow:0 12px 36px rgba(0,0,0,0.42),0 3px 10px rgba(0,0,0,0.25)}
     #jenkinsai-inspector *{box-sizing:border-box}
 
     /* Small Quick Summary Toast above bot */
@@ -51,22 +52,20 @@
     #jenkinsai-inspector .ai-context-banner{padding:10px 16px;background:var(--accent-soft);border-bottom:1px solid var(--border);font-size:12px;color:var(--fg);line-height:1.4;display:flex;align-items:center;gap:8px;flex-shrink:0}
     #jenkinsai-inspector .ai-context-banner strong{color:var(--accent);font-weight:700}
     #jenkinsai-inspector .ai-context-banner>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    #jenkinsai-inspector .ai-remember{border:1px solid var(--border);border-radius:7px;padding:5px 9px;background:var(--surface);color:var(--accent);font-size:11px;font-weight:600;white-space:nowrap;cursor:pointer}
-    #jenkinsai-inspector .ai-remember:disabled{color:var(--muted);cursor:default}
 
     /* Chat Thread */
     #jenkinsai-inspector .ai-thread{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:16px}
     #jenkinsai-inspector .ai-msg{margin:0;font-size:13px;line-height:1.6;overflow-wrap:anywhere;padding:10px 14px;border-radius:12px;max-width:92%}
     #jenkinsai-inspector .ai-msg b{font-weight:700}
-    #jenkinsai-inspector .ai-msg[data-role=user]{background:var(--accent);color:#ffffff;margin-left:auto;border-bottom-right-radius:4px}
+    #jenkinsai-inspector .ai-msg[data-role=user]{background:var(--button);color:#ffffff;margin-left:auto;border-bottom-right-radius:4px}
     #jenkinsai-inspector .ai-msg[data-role=model]{background:var(--surface);border:1px solid var(--border);color:var(--fg);border-bottom-left-radius:4px}
 
     /* Chat Input */
     #jenkinsai-inspector .ai-form{display:flex;gap:8px;align-items:flex-end;padding:12px 16px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0}
     #jenkinsai-inspector .ai-form textarea{flex:1;resize:none;min-height:40px;max-height:100px;border:1px solid var(--border);border-radius:10px;padding:9px 12px;background:var(--bg);color:var(--fg);font:13px/1.45 system-ui,sans-serif;outline:none}
     #jenkinsai-inspector .ai-form textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-    #jenkinsai-inspector .ai-form button[type=submit]{border:none;background:var(--accent);color:#fff;border-radius:10px;padding:0 18px;height:40px;font:600 13px system-ui,sans-serif;cursor:pointer;flex-shrink:0;transition:background .15s}
-    #jenkinsai-inspector .ai-form button[type=submit]:hover{background:var(--accent-hover)}
+    #jenkinsai-inspector .ai-form button[type=submit]{border:none;background:var(--button);color:#fff;border-radius:10px;padding:0 18px;height:40px;font:600 13px system-ui,sans-serif;cursor:pointer;flex-shrink:0;transition:background .15s}
+    #jenkinsai-inspector .ai-form button[type=submit]:hover{background:var(--button-hover)}
 
     /* Quick Prompt Pills */
     #jenkinsai-inspector .ai-quick-prompts{display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px 6px;background:var(--bg);flex-shrink:0}
@@ -93,17 +92,24 @@
 
     @keyframes ai-slideup{from{opacity:0;transform:translateY(12px) scale(0.98)}to{opacity:1;transform:none}}
     #jenkinsai-inspector .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
-    #jenkinsai-inspector .ai-diagnosis{max-width:100%;padding:13px 14px;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px;background:var(--surface);color:var(--fg)}
-    #jenkinsai-inspector .ai-diagnosis-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
-    #jenkinsai-inspector .ai-diagnosis-title{font-size:12px;font-weight:700}
+    #jenkinsai-inspector .ai-msg.ai-diagnosis{max-width:100%;padding:0;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px;background:var(--surface);color:var(--fg)!important}
+    #jenkinsai-inspector .ai-diagnosis-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 13px;cursor:pointer;list-style:none}
+    #jenkinsai-inspector .ai-diagnosis-toggle::-webkit-details-marker{display:none}
+    #jenkinsai-inspector .ai-diagnosis-toggle:after{content:"Show";color:var(--accent);font-size:11px;font-weight:600}
+    #jenkinsai-inspector .ai-diagnosis[open] .ai-diagnosis-toggle:after{content:"Hide"}
+    #jenkinsai-inspector .ai-diagnosis-title{font-size:12px;font-weight:700;color:var(--fg)!important}
     #jenkinsai-inspector .ai-diagnosis-result{font-size:10px;font-weight:650;color:var(--muted);background:var(--accent-soft);padding:3px 7px;border-radius:6px}
-    #jenkinsai-inspector .ai-diagnosis-summary{margin:0 0 9px;font-size:13px;line-height:1.5}
-    #jenkinsai-inspector .ai-diagnosis-row{margin-top:7px;padding-top:7px;border-top:1px solid var(--border)}
-    #jenkinsai-inspector .ai-diagnosis-row strong{display:block;margin-bottom:2px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.35px}
-    #jenkinsai-inspector .ai-diagnosis-row span{display:block;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+    #jenkinsai-inspector .ai-diagnosis-content{padding:0 13px 12px}
+    #jenkinsai-inspector .ai-diagnosis-summary{margin:0 0 9px;font-size:13px;line-height:1.5;color:var(--fg)!important}
+    #jenkinsai-inspector .ai-diagnosis-row{margin-top:7px;padding-top:7px;border-top:1px solid var(--border);color:var(--fg)!important}
+    #jenkinsai-inspector .ai-diagnosis-row strong{display:block;margin-bottom:2px;font-size:10px;color:var(--muted)!important;text-transform:uppercase;letter-spacing:.35px}
+    #jenkinsai-inspector .ai-diagnosis-row span{display:block;font-size:12px;line-height:1.5;overflow-wrap:anywhere;color:var(--fg)!important}
     #jenkinsai-inspector[data-verdict=failed] .ai-diagnosis-result,#jenkinsai-inspector[data-verdict=issue] .ai-diagnosis-result{background:#fff0f1;color:var(--bad)}
     #jenkinsai-inspector[data-verdict=clean] .ai-diagnosis-result{background:#eaf7f2;color:var(--good)}
     #jenkinsai-inspector[data-verdict=uncertain] .ai-diagnosis-result{background:#fff5e5;color:var(--warn)}
+    #jenkinsai-inspector[data-theme=dark][data-verdict=failed] .ai-diagnosis-result,#jenkinsai-inspector[data-theme=dark][data-verdict=issue] .ai-diagnosis-result{background:#482b39}
+    #jenkinsai-inspector[data-theme=dark][data-verdict=clean] .ai-diagnosis-result{background:#1d443e}
+    #jenkinsai-inspector[data-theme=dark][data-verdict=uncertain] .ai-diagnosis-result{background:#4b3a27}
     @media(max-width:520px){#jenkinsai-inspector{right:12px;bottom:12px}#jenkinsai-inspector .ai-toast{width:min(340px,calc(100vw - 24px))}#jenkinsai-inspector .ai-chat-panel{width:calc(100vw - 24px);right:0;bottom:64px;height:min(680px,calc(100dvh - 88px));min-height:360px}}
     @media(max-height:560px){#jenkinsai-inspector .ai-chat-panel{height:calc(100dvh - 82px);min-height:300px}#jenkinsai-inspector .ai-quick-prompts{padding-top:5px;padding-bottom:4px}}
     @media(prefers-reduced-motion:reduce){#jenkinsai-inspector *,#jenkinsai-inspector *:before{animation:none!important;transition:none!important}}
@@ -141,7 +147,6 @@
       </div>
       <div class="ai-context-banner">
         <span><strong class="ai-context-status">Inspecting build...</strong></span>
-        <button class="ai-remember" type="button" hidden>Remember cause</button>
         <button class="ai-copy-report" type="button" title="Copy build summary to clipboard">Copy summary</button>
       </div>
       <div class="ai-thread" aria-live="polite"></div>
@@ -176,7 +181,6 @@
   const panelClose = root.querySelector(".ai-panel-close");
   const langSelect = root.querySelector(".ai-lang-select");
   const copyReportBtn = root.querySelector(".ai-copy-report");
-  const rememberBtn = root.querySelector(".ai-remember");
   const quickPromptContainer = root.querySelector(".ai-quick-prompts");
   const contextStatus = root.querySelector(".ai-context-status");
   const launcher = root.querySelector(".ai-launcher");
@@ -184,14 +188,12 @@
   const form = root.querySelector(".ai-form");
   const question = root.querySelector("#jenkinsai-question");
   const chatApi = new URL("../api/chat", source);
-  const memoryApi = new URL("../api/memory", source);
   let history = [];
   let chatJob = jobs.join("/");
   let chatBuild = build;
   let chatting = false;
   let cachedDiagnosis = null;
   let welcomeMessage = null;
-  let remembered = false;
   let selectedLang = "Hinglish";
 
   if (langSelect) {
@@ -206,7 +208,32 @@
     };
   }
 
-  root.dataset.theme = "light";
+  function syncTheme() {
+    const themeElements = [document.documentElement, document.body];
+    const darkClass = themeElements.some(element => /(^|[\s_-])dark([\s_-]|$)/i.test(element.className?.baseVal || element.className || ""));
+    const declaredTheme = themeElements.map(element => element.getAttribute("data-theme") || element.getAttribute("theme"))
+      .find(value => value && /^(light|dark)$/i.test(value));
+    let darkBackground = false;
+    let pageBackgroundDetected = false;
+    for (let element = document.body; element; element = element.parentElement) {
+      const background = getComputedStyle(element).backgroundColor;
+      const match = background.match(/^rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s/]+([\d.]+))?\)$/i);
+      if (!match || (match[4] !== undefined && Number(match[4]) === 0)) continue;
+      pageBackgroundDetected = true;
+      const [red, green, blue] = match.slice(1, 4).map(Number);
+      darkBackground = (0.2126 * red + 0.7152 * green + 0.0722 * blue) < 128;
+      break;
+    }
+    const dark = declaredTheme
+      ? declaredTheme.toLowerCase() === "dark"
+      : darkClass || (pageBackgroundDetected ? darkBackground : matchMedia("(prefers-color-scheme: dark)").matches);
+    root.dataset.theme = dark ? "dark" : "light";
+  }
+  syncTheme();
+  const themeObserver = new MutationObserver(syncTheme);
+  themeObserver.observe(document.documentElement, {attributes: true, attributeFilter: ["class", "style", "data-theme", "theme"]});
+  themeObserver.observe(document.body, {attributes: true, attributeFilter: ["class", "style", "data-theme", "theme"]});
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", syncTheme);
 
   async function errorMessage(response, action) {
     try {
@@ -219,7 +246,7 @@
   // Toggle Chat Panel on Launcher Click
   launcher.onclick = () => {
     if (chatPanel.hidden) {
-      toast.hidden = true; // Dismiss quick summary toast when chat opens
+      toast.hidden = true;
       chatPanel.hidden = false;
       launcher.setAttribute("aria-expanded", "true");
       if (!thread.children.length) {
@@ -302,23 +329,27 @@
     }
   }
   function createDiagnosisCard(data) {
-    const card = document.createElement("article");
+    const card = document.createElement("details");
     card.className = "ai-msg ai-diagnosis";
     card.dataset.role = "model";
-    const head = document.createElement("div");
-    head.className = "ai-diagnosis-head";
+    const head = document.createElement("summary");
+    head.className = "ai-diagnosis-toggle";
+    const headingGroup = document.createElement("span");
     const heading = document.createElement("strong");
     heading.className = "ai-diagnosis-title";
     heading.textContent = `Build #${data.build || build}`;
     const status = document.createElement("span");
     status.className = "ai-diagnosis-result";
     status.textContent = `${({FAILED: "Build failed", ISSUE: "Issue found", CLEAN: "No issue found", UNCERTAIN: "Needs review"})[data.verdict] || "Build status"} · ${data.jenkins_result || "UNKNOWN"}`;
-    head.append(heading, status);
+    headingGroup.append(heading, document.createTextNode(" · "), status);
+    head.append(headingGroup);
     card.append(head);
+    const content = document.createElement("div");
+    content.className = "ai-diagnosis-content";
     const summary = document.createElement("p");
     summary.className = "ai-diagnosis-summary";
     summary.textContent = data.summary || "Review the build log.";
-    card.append(summary);
+    content.append(summary);
     const category = data.category === "APPLICATION"
       ? "Application code"
       : data.category === "DEVOPS" ? "Jenkins / agent setup" : "Needs review";
@@ -337,14 +368,15 @@
       const content = document.createElement("span");
       content.textContent = value;
       row.append(title, content);
-      card.append(row);
+      content.append(row);
     }
     if (data.partial_log) {
       const row = document.createElement("div");
       row.className = "ai-diagnosis-row";
       row.textContent = "This is a partial log. Check the full console before acting.";
-      card.append(row);
+      content.append(row);
     }
+    card.append(content);
     return card;
   }
   function addDiagnosis(data) {
@@ -379,7 +411,6 @@
         : "I only answer questions about this Jenkins build.");
       if (!data.refused) {
         const switchedBuild = data.job && data.build && (data.job !== previousJob || data.build !== previousBuild);
-        if (switchedBuild && rememberBtn) rememberBtn.hidden = true;
         const conversation = switchedBuild ? [candidate[candidate.length - 1]] : candidate;
         history = [...conversation, {role: "model", content: String(answer).slice(0, 12000)}];
         chatJob = data.job || chatJob;
@@ -389,7 +420,7 @@
         if (contextStatus) contextStatus.textContent = `${chatJob} #${chatBuild}${data.context?.result ? ` · ${data.context.result}` : ""}`;
       }
       const prior = data.memory_match
-        ? `Prior confirmed match: ${data.memory_match.root_cause} (saved from ${data.memory_match.source_job} #${data.memory_match.source_build}).\n`
+        ? `Prior matching diagnosis (verify against this build): ${data.memory_match.root_cause} (from ${data.memory_match.source_job} #${data.memory_match.source_build}).\n`
         : "";
       addChat("model", `${data.job && data.build ? `${data.job} #${data.build}\n` : ""}${prior}${answer}`);
     } catch (error) {
@@ -486,14 +517,7 @@
       }
 
       cachedDiagnosis = data;
-      remembered = Boolean(data.memory_match);
       root.dataset.verdict = (data.verdict || "unknown").toLowerCase();
-      if (rememberBtn) {
-        const shouldRemember = ["ISSUE", "FAILED"].includes(data.verdict);
-        rememberBtn.hidden = !shouldRemember;
-        rememberBtn.disabled = remembered;
-        rememberBtn.textContent = remembered ? "Already remembered" : "Remember cause";
-      }
 
       // Update Quick Summary Toast (compact popup above bot)
       if (toastBadge) toastBadge.textContent = ({
@@ -529,32 +553,6 @@
         toast.hidden = false;
       }
     }
-  }
-
-  if (rememberBtn) {
-    rememberBtn.onclick = async () => {
-      if (!cachedDiagnosis || remembered || !window.confirm("Server par is redacted cause ko future matching errors ke liye save karein? Raw log save nahi hoga.")) return;
-      rememberBtn.disabled = true;
-      try {
-        const response = await fetch(memoryApi, {
-          method: "POST",
-          credentials: "same-origin",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({
-            job: jobs.join("/"),
-            build,
-            root_cause: cachedDiagnosis.summary,
-            next_step: cachedDiagnosis.next || "Verify the cited log evidence."
-          })
-        });
-        if (!response.ok) throw new Error(await errorMessage(response, "Could not save cause"));
-        remembered = true;
-        rememberBtn.textContent = "Remembered";
-      } catch (error) {
-        rememberBtn.disabled = false;
-        rememberBtn.textContent = error.message || "Could not save";
-      }
-    };
   }
 
   inspect();

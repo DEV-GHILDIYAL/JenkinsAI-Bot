@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/Jenkins-CI%2FCD-D24939?style=for-the-badge&logo=jenkins&logoColor=white" alt="Jenkins" />
   <img src="https://img.shields.io/badge/FastAPI-Production%20Backend-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI" />
   <img src="https://img.shields.io/badge/Security-Automated%20Redaction%20Engine-10B981?style=for-the-badge&logo=shield&logoColor=white" alt="Security" />
-  <img src="https://img.shields.io/badge/Tests-34%20Passing%20%E2%9C%94-success?style=for-the-badge" alt="Tests" />
+  <img src="https://img.shields.io/badge/Tests-Passing-success?style=for-the-badge" alt="Tests" />
   <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="License" />
 </p>
 
@@ -40,8 +40,8 @@ Embedded seamlessly inside your Jenkins UI, it diagnoses pipeline builds in real
 | 🎯 **App vs DevOps Classifier** | Automatically tags root cause as `APPLICATION` (developer's bug) or `DEVOPS` (infra/runner failure). | **Zero unnecessary escalation** |
 | 🛡️ **Zero-Leak Secret Redaction** | Strips AWS Keys, GitHub PATs, JWTs, Google API keys, database URLs, and `.env` passwords *before* any LLM payload is dispatched. | **100% Secure & Compliant** |
 | 💬 **Interactive DevTools Chat** | Ask follow-up questions or target other pipelines naturally: `"check pipeline testing build 1"` in English or Hinglish! | **Frictionless workflow** |
-| 🤖 **Expressive Robot Face UI** | Floating responsive widget with blinking eyes, dynamic mouth expressions (`:)` Clean, `:(` Failed), and non-intrusive toast popups. | **Top-tier UX** |
-| 🧠 **Shared Memory & Fingerprinting** | Stores confirmed error signatures in SQLite to identify recurrent pipeline failures instantly without re-invoking models. | **Instant recurrent match** |
+| 🧠 **Automatic Shared Memory** | After a complete, evidence-backed issue diagnosis, stores a redacted cause and error fingerprint in the server's shared SQLite database—no button or manual confirmation. | **Every user benefits from recurring patterns** |
+| 🌗 **Theme-aware Jenkins widget** | Compact diagnosis, follow-up chat, readable evidence, and light/dark colors that follow Jenkins. | **Fits your Jenkins UI** |
 | 🔍 **Hidden Failure Detection** | Detects silently failing background jobs or unresolved exceptions even when Jenkins marks `SUCCESS`. | **No silent escapes** |
 
 ---
@@ -63,7 +63,7 @@ flowchart TD
     subgraph BackendEngine ["FastAPI Core Backend (Port :8000)"]
         Redactor["🔒 Secret Redaction Engine\n(AWS, PATs, JWTs, Keys, Env)"]
         Parser["Console Excerpt & Line Picker"]
-        Memory["🧠 SQLite Fingerprint Cache"]
+        Memory["🧠 Shared SQLite Diagnosis Memory"]
         ScopeGuard["Off-Topic Chat Scope Guard"]
     end
 
@@ -140,6 +140,14 @@ The automated script handles:
 - ✅ Nginx reverse proxy configuration on `:8090`
 - ✅ Dynamic script injection into Jenkins Console pages
 
+## 🧠 Shared pipeline memory
+
+JenkinsAI automatically remembers a diagnosis after it identifies an `ISSUE` or `FAILED` build **and** has a recognizable error fingerprint, a cited log line, a next step, and a complete log excerpt. There is no remember button or per-user confirmation. The memory belongs to the JenkinsAI server/database: all people using the same JenkinsAI instance share the accumulated patterns, so one team's recurring agent/setup error can help another team on that instance.
+
+Only the normalized error fingerprint (a one-way hash), redacted short cause/next-step text, and source job/build reference are persisted. Raw console logs are not saved. This is shared server-side memory that helps future analyses; it does not train or change the hosted Gemma model. A matching diagnosis is offered to the model as a clue—not treated as proof—and the current build evidence remains authoritative. Similar but non-identical error text may not match.
+
+Separate JenkinsAI installations have separate databases and do **not** share memory merely because they use the same model/API provider. On the systemd deployment the shared database is `/var/lib/jenkinsai/memory.sqlite3`; it persists across app updates. See [deployment notes](docs/DEPLOYMENT.md) for storage and backup details.
+
 ---
 
 ## 🧪 Testing & Verification
@@ -154,7 +162,7 @@ pytest -v
 tests/test_memory.py ......................... PASSED [100%]
 tests/test_monitor.py ........................ PASSED [100%]
 tests/test_safety.py ......................... PASSED [100%]
-============================== 34 passed in 1.45s ==============================
+All tests pass with `pytest -v`.
 ```
 
 - 🛡️ **Secret Sanitization**: Verified against AWS tokens, GitHub PATs, JWTs, and private keys.

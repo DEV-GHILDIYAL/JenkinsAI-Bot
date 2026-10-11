@@ -24,7 +24,7 @@ def test_error_signature_ignores_log_line_numbers_and_redacts_secrets():
     assert error_signature({"log": "L1: All tests passed"}) is None
 
 
-def test_memory_persists_only_confirmed_diagnosis_and_fingerprint(tmp_path):
+def test_memory_persists_only_redacted_diagnosis_and_fingerprint(tmp_path):
     path = tmp_path / "memory.sqlite3"
     memory = RootCauseMemory(path)
     signature = error_signature({"log": "L2: npm: not found"})
@@ -63,6 +63,7 @@ class FixtureModel:
         if "Inspect this Jenkins console log" in messages[0].content:
             return (
                 "VERDICT: FAILED\n"
+                "CATEGORY: DEVOPS\n"
                 "SUMMARY: Node.js is missing on this Jenkins agent.\n"
                 "EVIDENCE: L8: npm: not found\n"
                 "NEXT: Install Node.js/npm on the job agent."
@@ -70,28 +71,17 @@ class FixtureModel:
         return "Diagnosis based on this build."
 
 
-def test_inspection_remembers_confirmed_cause_for_later_build_and_chat_can_select_build(tmp_path):
+def test_inspection_automatically_remembers_cause_for_later_build_and_chat_can_select_build(tmp_path):
     settings = replace(Settings(), memory_db_path=str(tmp_path / "memory.sqlite3"))
     model = FixtureModel()
     client = TestClient(create_app(settings, FixtureJenkins(), model))
     first = client.post("/api/inspect", json={"job": "testing", "build": 1}).json()
     assert first["memory_match"] is None
 
-    saved = client.post(
-        "/api/memory",
-        json={
-            "job": "testing",
-            "build": 1,
-            "root_cause": first["summary"],
-            "next_step": first["next"],
-        },
-    )
-    assert saved.status_code == 200 and saved.json()["saved"]
-
     later = client.post("/api/inspect", json={"job": "another-pipeline", "build": 8}).json()
     assert later["memory_match"]["source_job"] == "testing"
     assert later["memory_match"]["source_build"] == 1
-    assert model.contexts[-1]["prior_user_confirmed_diagnosis"]["root_cause"] == first["summary"]
+    assert model.contexts[-1]["prior_learned_diagnosis"]["root_cause"] == first["summary"]
 
     chat = client.post(
         "/api/chat",
@@ -107,3 +97,44 @@ def test_inspection_remembers_confirmed_cause_for_later_build_and_chat_can_selec
     assert chat.json()["build"] == 9
     assert chat.json()["memory_match"]["source_build"] == 1
     assert len(model.messages[-1]) == 1
+
+
+def test_uncertain_or_incomplete_diagnoses_are_not_learned(tmp_path):
+    class UncertainModel(FixtureModel):
+        async def chat(self, messages, context=None):
+            return (
+                "VERDICT: UNCERTAIN\nCATEGORY: UNCERTAIN\n"
+                "SUMMARY: Cause is unclear.\nEVIDENCE: None\nNEXT: None"
+            )
+
+    class SuccessfulJenkins(FixtureJenkins):
+        async def context(self, job, build):
+            context = await super().context(job, build)
+            context["result"] = "SUCCESS"
+            return context
+
+    settings = replace(Settings(), memory_db_path=str(tmp_path / "memory.sqlite3"))
+    client = TestClient(create_app(settings, SuccessfulJenkins(), UncertainModel()))
+    response = client.post("/api/inspect", json={"job": "testing", "build": 1})
+    assert response.status_code == 200
+    assert response.json()["verdict"] == "UNCERTAIN"
+
+    later = client.post("/api/inspect", json={"job": "another-pipeline", "build": 8})
+    assert later.status_code == 200
+    assert later.json()["memory_match"] is None
+
+
+def test_diagnosis_without_a_real_cited_log_line_is_not_learned(tmp_path):
+    class UncitedModel(FixtureModel):
+        async def chat(self, messages, context=None):
+            return (
+                "VERDICT: FAILED\nCATEGORY: DEVOPS\n"
+                "SUMMARY: Node.js is missing.\n"
+                "EVIDENCE: L999: npm: not found\nNEXT: Install Node.js."
+            )
+
+    settings = replace(Settings(), memory_db_path=str(tmp_path / "memory.sqlite3"))
+    client = TestClient(create_app(settings, FixtureJenkins(), UncitedModel()))
+    client.post("/api/inspect", json={"job": "testing", "build": 1})
+    later = client.post("/api/inspect", json={"job": "another-pipeline", "build": 8})
+    assert later.json()["memory_match"] is None

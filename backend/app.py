@@ -50,11 +50,6 @@ class InspectRequest(BaseModel):
     build: int = Field(ge=1)
 
 
-class RememberRequest(InspectRequest):
-    root_cause: str = Field(min_length=1, max_length=180)
-    next_step: str = Field(min_length=1, max_length=160)
-
-
 INSPECT_PROMPT = """Inspect this Jenkins console log for this build only. Jenkins SUCCESS is not proof that the work succeeded: detect real errors, failed tests, ignored command failures, and silently skipped work even when the final result says SUCCESS. Distinguish these from harmless words like 'error' in test names, expected negative tests, warnings, and errors that were recovered and verified.
 Crucial task: Classify who is responsible for the fix so developers don't waste time escalating to DevOps if it's their code:
 - APPLICATION: Unit/integration test failure, compiler syntax error, missing package.json/code dependency, application assertion, bad code commit.
@@ -129,14 +124,34 @@ def create_app(settings=None, jenkins=None, model=None):
                 previous = memory.find(error_signature(ctx, s.secrets()))
                 if previous:
                     ctx = dict(ctx)
-                    ctx["prior_user_confirmed_diagnosis"] = previous
+                    ctx["prior_learned_diagnosis"] = previous
             answer = await ai.chat(messages, ctx)
         return answer, ctx
 
     async def inspect_build(ctx):
         answer, ai_context = await generate([Message(role="user", content=INSPECT_PROMPT)], context=ctx)
         result = parse_inspection(answer, ctx)
-        result["memory_match"] = ai_context.get("prior_user_confirmed_diagnosis")
+        result["memory_match"] = ai_context.get("prior_learned_diagnosis")
+        signature = error_signature(ctx, s.secrets())
+        cited_line = re.search(r"\bL(\d+)\b", result["evidence"])
+        evidence_present = cited_line and any(
+            line.startswith(f"L{cited_line.group(1)}:") for line in ctx["log"].splitlines()
+        )
+        if (
+            signature
+            and result["verdict"] in {"ISSUE", "FAILED"}
+            and result["category"] in {"APPLICATION", "DEVOPS"}
+            and evidence_present
+            and result["next"] != "None"
+            and not result["partial_log"]
+        ):
+            memory.save(
+                signature,
+                redact(result["summary"], s.secrets()).strip(),
+                redact(result["next"], s.secrets()).strip(),
+                redact(ctx["job"], s.secrets()),
+                ctx["build"],
+            )
         return result
 
     async def analyze_failure(job, build):
@@ -221,24 +236,8 @@ def create_app(settings=None, jenkins=None, model=None):
             raise
         return {"answer": answer, "refused": False, "demo": s.demo,
                 "model": None if s.demo else s.model, "job": job, "build": build,
-                "memory_match": ctx.get("prior_user_confirmed_diagnosis") if ctx else None,
+                "memory_match": ctx.get("prior_learned_diagnosis") if ctx else None,
                 "context": {k: v for k, v in ctx.items() if k != "log"} if ctx else None}
-
-    @app.post("/api/memory", dependencies=[Depends(authorize)])
-    async def remember(body: RememberRequest):
-        ctx = await j.context(body.job, body.build)
-        if ctx["building"]:
-            raise HTTPException(409, "Wait until the build finishes before saving its diagnosis")
-        signature = error_signature(ctx, s.secrets())
-        if not signature:
-            raise HTTPException(422, "No recognizable error lines were found; nothing was saved")
-        root_cause = redact(body.root_cause, s.secrets()).strip()
-        next_step = redact(body.next_step, s.secrets()).strip()
-        if not root_cause or not next_step:
-            raise HTTPException(422, "Diagnosis became empty after secret redaction")
-        saved = memory.save(signature, root_cause, next_step,
-                            redact(ctx["job"], s.secrets()), body.build)
-        return {"saved": saved, "message": "Diagnosis remembered for matching errors; raw logs were not stored."}
 
     @app.post("/api/inspect", dependencies=[Depends(authorize)])
     async def inspect(body: InspectRequest):
